@@ -8,7 +8,7 @@
 // Nếu mã nằm riêng, dán ID của Google Sheet vào đây (đoạn giữa /d/ và /edit trong link Sheet).
 var SHEET_ID = '13D_F8RS0WjWfkBCuu3OGyI8NlgYNdhZnvI5HNET-jY4'; // Sheet QUẢN LÝ SUPER SEAFOODS; để trống nếu script gắn trực tiếp trong Sheet
 
-var TABS = ['NHANH', 'DOI_TAC', 'HOP_DONG', 'LO_HANG', 'HD_SAN_PHAM', 'HD_LIEN_KET', 'CONG_NO', 'UNG_TRUOC', 'NCC_THI_TRUONG', 'THI_TRUONG', 'YEU_CAU_THI_TRUONG', 'CONG_TY', 'KHAU', 'BUOC_DON', 'LIEN_HE', 'CAI_DAT'];
+var TABS = ['NHANH', 'DOI_TAC', 'HOP_DONG', 'LO_HANG', 'HD_SAN_PHAM', 'HD_LIEN_KET', 'CONG_NO', 'UNG_TRUOC', 'NCC_THI_TRUONG', 'THI_TRUONG', 'YEU_CAU_THI_TRUONG', 'CONG_TY', 'KHAU', 'BUOC_DON', 'LIEN_HE', 'CAI_DAT', 'TUY_CHINH'];
 
 function doGet(e) {
   var p = (e && e.parameter) || {};
