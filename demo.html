@@ -240,7 +240,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   </div>
   <div class="actions hidden" id="actions">
     <button type="button" class="btn pri" id="a-hd">+ Thêm hợp đồng</button>
-    <button type="button" class="btn" id="a-im">Nhập từ hợp đồng</button>
+    <button type="button" class="btn" id="a-im">Nhập CSV / JSON</button>
     <button type="button" class="btn" id="a-lh">Ghi lần làm việc</button>
   </div>
 
@@ -1010,24 +1010,39 @@ function parseTable(t){
   row.push(cur); if(row.some(function(x){return x.trim()!==""})) rows.push(row);
   return rows;
 }
-function csvToContract(t){
+function csvToContracts(t){
   var R=parseTable(t); if(R.length<2) throw new Error("Cần dòng tiêu đề và ít nhất một dòng dữ liệu.");
-  var H=R[0].map(function(h){return h.trim()}), o={lines:[]};
+  var H=R[0].map(function(h){return h.trim()}), out=[], o=null, num2=function(v){return v===""||v===undefined?"":Number(String(v).replace(",","."))};
   R.slice(1).forEach(function(r){ var rec={}; H.forEach(function(h,i){ rec[h]=(r[i]||"").trim() });
+    if(rec.id||!o){ o={lines:[]}; out.push(o) }
     Object.keys(rec).forEach(function(k){ if(["san_pham","khoi_luong_tan","don_gia"].indexOf(k)<0&&rec[k]!==""&&o[k]===undefined) o[k]=rec[k] });
-    if(rec.san_pham||rec.khoi_luong_tan||rec.don_gia) o.lines.push({san_pham:rec.san_pham||"",khoi_luong_tan:rec.khoi_luong_tan===""||rec.khoi_luong_tan===undefined?"":Number(String(rec.khoi_luong_tan).replace(",",".")),don_gia:rec.don_gia===""||rec.don_gia===undefined?"":Number(String(rec.don_gia).replace(",","."))}) });
-  return o;
+    if(rec.san_pham||rec.khoi_luong_tan||rec.don_gia) o.lines.push({san_pham:rec.san_pham||"",khoi_luong_tan:num2(rec.khoi_luong_tan),don_gia:num2(rec.don_gia)}) });
+  return out;
+}
+function fixDates(o){ ["han_giao","het_han","ngay_ky"].forEach(function(k){ var m=/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/.exec(String(o[k]||"").trim()); if(m) o[k]=m[3]+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[1]).slice(-2) }); if(!Array.isArray(o.lines)) o.lines=[]; return o }
+function importMany(list){
+  var ok=list.filter(function(o){return o.id&&o.loai&&o.doi_tac&&o.het_han&&!(DB.HOP_DONG||[]).some(function(r){return String(r.id)===String(o.id)})}), skip=list.length-ok.length;
+  var bg=openModal('<h3>Nhập '+list.length+' hợp đồng</h3><p class="sub">'+ok.length+' hợp đồng hợp lệ: '+esc(ok.map(function(o){return o.id}).join(", ")||"—")+'.'+(skip?' Bỏ qua '+skip+' hợp đồng thiếu mã, loại, đối tác, hết hạn hoặc trùng mã.':'')+'</p><div class="fmsg" id="immsg" role="status"></div><div class="mfoot"><button type="button" class="btn" data-a="close">Đóng</button>'+(ok.length?'<button type="button" class="btn pri" id="imgo">Lưu tất cả</button>':'')+'</div>',false);
+  bg.addEventListener("click",function(e){ if(e.target.closest("[data-a=close]")) closeModal(); });
+  var go=bg.querySelector("#imgo"); if(!go) return;
+  go.onclick=function(){ var m=bg.querySelector("#immsg"), i=0, done=0; go.disabled=true;
+    (function next(){ if(i>=ok.length){ m.style.color="var(--ok)"; m.textContent="Đã lưu "+done+" hợp đồng."; return }
+      var o=ok[i++], a=aggLines(o.lines||[]), obj={}; Object.keys(o).forEach(function(k){ if(k!=="lines") obj[k]=o[k] }); Object.assign(obj,a.agg);
+      m.style.color="var(--muted)"; m.textContent="Đang lưu "+i+"/"+ok.length+"…";
+      saveContract("add",obj.id,obj,a.lines,function(good,t){ if(good){ done++; next() } else { m.style.color="var(--crit)"; m.textContent="Dừng ở "+obj.id+": "+t+" (đã lưu "+done+")."; } }) })();
+  };
 }
 function openImport(){
-  var bg=openModal('<h3>Nhập từ hợp đồng</h3><p class="sub">Dán dữ liệu hợp đồng dạng CSV (dòng đầu là tiêu đề, mỗi sản phẩm một dòng) hoặc JSON. Trang sẽ điền sẵn vào form để bạn kiểm tra rồi lưu.</p><textarea id="imp" rows="9" style="width:100%;box-sizing:border-box" placeholder=\'{"id":"HDB-005","loai":"bán","doi_tac":"…","lines":[{"san_pham":"…","khoi_luong_tan":10,"don_gia":9}]}\'></textarea><div class="fmsg" id="impmsg" role="status"></div><div class="mfoot"><button type="button" class="btn" data-a="close">Đóng</button><button type="button" class="btn pri" id="impgo">Điền vào form</button></div>',false);
+  var bg=openModal('<h3>Nhập CSV hoặc JSON</h3><p class="sub">Chọn file .csv/.json hoặc dán dữ liệu. CSV: dòng đầu là tiêu đề (id, loai, doi_tac, het_han, thi_truong, san_pham, khoi_luong_tan, don_gia…), mỗi sản phẩm một dòng, hợp đồng mới bắt đầu ở dòng có mã. Ngày dùng dd/mm/yyyy hoặc yyyy-mm-dd.</p><input type="file" id="impf" accept=".csv,.tsv,.txt,.json,text/csv,application/json" style="margin:6px 0"><textarea id="imp" rows="8" style="width:100%;box-sizing:border-box" placeholder="id,loai,doi_tac,het_han,thi_truong,san_pham,khoi_luong_tan,don_gia"></textarea><div class="fmsg" id="impmsg" role="status"></div><div class="mfoot"><button type="button" class="btn" data-a="close">Đóng</button><button type="button" class="btn pri" id="impgo">Tiếp tục</button></div>',false);
   bg.addEventListener("click",function(e){ if(e.target.closest("[data-a=close]")) closeModal(); });
+  bg.querySelector("#impf").onchange=function(){ var f=this.files&&this.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(){ bg.querySelector("#imp").value=String(r.result||"").replace(/^\uFEFF/,"") }; r.readAsText(f,"utf-8") };
   bg.querySelector("#impgo").onclick=function(){
-    var t=bg.querySelector("#imp").value.trim().replace(/^```(?:json)?/i,"").replace(/```$/,"").trim(), m=bg.querySelector("#impmsg"), o;
-    try{ o=t.charAt(0)==="{"?JSON.parse(t):csvToContract(t); }catch(e){ m.style.color="var(--crit)"; m.textContent="Không đọc được dữ liệu. Dán JSON, hoặc bảng CSV có dòng tiêu đề. "+(e.message&&t.charAt(0)!=="{"?e.message:""); return }
-    if(!o||typeof o!=="object"||Array.isArray(o)){ m.style.color="var(--crit)"; m.textContent="Dữ liệu phải là một hợp đồng."; return }
-    ["han_giao","het_han","ngay_ky"].forEach(function(k){ var m=/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/.exec(String(o[k]||"").trim()); if(m) o[k]=m[3]+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[1]).slice(-2) });
-    if(!Array.isArray(o.lines)) o.lines=[];
-    closeModal(); openContractForm(o);
+    var t=bg.querySelector("#imp").value.trim().replace(/^```(?:json)?/i,"").replace(/```$/,"").trim(), m=bg.querySelector("#impmsg"), list;
+    try{ if(t.charAt(0)==="{") list=[JSON.parse(t)]; else if(t.charAt(0)==="[") list=JSON.parse(t); else list=csvToContracts(t); }
+    catch(e){ m.style.color="var(--crit)"; m.textContent="Không đọc được dữ liệu. "+(t.charAt(0)==="{"||t.charAt(0)==="["?"JSON chưa đúng.":(e.message||"")); return }
+    list=list.filter(function(o){return o&&typeof o==="object"}).map(fixDates);
+    if(!list.length){ m.style.color="var(--crit)"; m.textContent="Không có hợp đồng nào."; return }
+    closeModal(); if(list.length===1) openContractForm(list[0]); else importMany(list);
   };
 }
 function openCatalog(){
