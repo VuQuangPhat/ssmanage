@@ -225,7 +225,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <div style="min-width:0">
         <div class="kicker" id="kicker">✦ HỆ THỐNG QUẢN LÝ</div>
         <h1 id="title">Quản lý thu mua – xuất khẩu thủy hải sản</h1>
-        <p class="sub" id="subtitle">Số liệu đọc từ Google Sheet; nội dung và ngưỡng cảnh báo sửa ở Sheet.</p>
+        <p class="sub hidden" id="subtitle"></p>
       </div>
     </div>
     <div class="author" id="author"></div>
@@ -241,7 +241,6 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   <div class="actions hidden" id="actions">
     <button type="button" class="btn pri" id="a-hd">+ Thêm hợp đồng</button>
     <button type="button" class="btn" id="a-lh">Ghi lần làm việc</button>
-    <button type="button" class="btn" id="a-dm">Danh mục</button>
   </div>
 
   <div id="banner" class="note hidden" style="margin:0 0 14px"></div>
@@ -283,7 +282,6 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
       <div id="board"></div>
       <details class="fold"><summary>Bảng lô hàng</summary><button type="button" class="btn lg" id="tg-khau" aria-expanded="false">Hiện mô tả 6 khâu</button><div id="khau-legend" class="legend hidden"></div><div class="tablewrap"><table id="lots" style="min-width:960px"></table></div></details>
       <details class="fold"><summary>Bảng hợp đồng</summary><div class="tablewrap"><table id="cts" style="min-width:1160px"></table></div></details>
-      <div class="note">Số liệu đọc từ các tab <span class="chip">HOP_DONG</span> <span class="chip">LO_HANG</span> <span class="chip">HD_LIEN_KET</span> <span class="chip">THI_TRUONG</span>. Ngưỡng cảnh báo sửa ở tab <span class="chip">CAI_DAT</span>.</div>
     </section>
 
     <section id="p-fin" role="tabpanel" aria-labelledby="t-fin" class="hidden">
@@ -299,7 +297,6 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 
     <section id="p-co" role="tabpanel" aria-labelledby="t-co" class="hidden">
       <div class="panel"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px"><h3 style="margin:0">Hồ sơ công ty</h3><button type="button" class="btn pri" id="a-co">Sửa thông tin</button></div><div class="dgrid" id="coinfo"></div></div>
-      <div class="note">Thông tin đọc từ tab <span class="chip">CONG_TY</span> của Google Sheet; sửa ở đó, mở lại trang là cập nhật.</div>
     </section>
 
     <section id="p-part" role="tabpanel" aria-labelledby="t-part" class="hidden">
@@ -322,7 +319,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
         </select>
       </div>
       <div class="tablewrap"><table id="ptab" style="min-width:940px"></table></div>
-      <div class="note"><b>Cách xếp hạng (tự tính, không nhập tay).</b> <span id="prules"></span> Dữ liệu đọc từ các tab <span class="chip">DOI_TAC</span> <span class="chip">CONG_NO</span> <span class="chip">LIEN_HE</span>; ngưỡng ở tab <span class="chip">CAI_DAT</span>.</div>
+      <div class="note"><b>Cách xếp hạng (tự tính, không nhập tay).</b> <span id="prules"></span></div>
     </section>
 
     <section id="p-data" role="tabpanel" aria-labelledby="t-data" class="hidden">
@@ -947,7 +944,7 @@ function route(){show(VIEWS[location.hash.replace("#","")]||"dash")}
 function bindTabs(){
   $("a-hd").onclick=openContractForm; bindLegend($("tg-khau"),$("khau-legend"),"6 khâu"); bindLegend($("tg-buoc"),$("buoc-legend"),"6 bước");
   $("board").addEventListener("click",function(e){var b=e.target.closest("[data-o]"); if(b) openOrder(b.getAttribute("data-o"))});
-  $("ogrp").addEventListener("click",function(e){var b=e.target.closest("[data-g]"); if(!b) return; OF.g=b.getAttribute("data-g"); renderBoard(buildAlerts())}); $("cts").addEventListener("click",function(e){var b=e.target.closest("[data-edit]"); if(b) openContractEdit(b.getAttribute("data-edit"))}); $("a-co").onclick=openCompanyEdit; $("a-lh").onclick=openContactForm; $("a-dm").onclick=openCatalog;
+  $("ogrp").addEventListener("click",function(e){var b=e.target.closest("[data-g]"); if(!b) return; OF.g=b.getAttribute("data-g"); renderBoard(buildAlerts())}); $("cts").addEventListener("click",function(e){var b=e.target.closest("[data-edit]"); if(b) openContractEdit(b.getAttribute("data-edit"))}); $("a-co").onclick=openCompanyEdit; $("a-lh").onclick=openContactForm;
   Object.keys(VIEWS).forEach(function(h){
     $("t-"+VIEWS[h]).onclick=function(){show(VIEWS[h]);try{location.hash=h}catch(e){}};
   });
