@@ -826,6 +826,7 @@ document.addEventListener("keydown",function(e){
 function refresh(){ buildModel(); renderChrome(); renderCompany(); renderMap(); renderDash(); renderPartners(); }
 function saveRow(tab,obj,done){
   if(DEMO){ (DB[tab]=DB[tab]||[]).push(obj); refresh(); done(true,"Đã thêm vào bản xem mẫu (không lưu vào Sheet)."); return; }
+  if(!(window.google&&google.script&&google.script.run)){ done(false,"Trang này chỉ xem. Nhập và sửa dữ liệu trực tiếp trong Google Sheet."); return; }
   google.script.run
     .withSuccessHandler(function(){ (DB[tab]=DB[tab]||[]).push(obj); refresh(); done(true,"Đã lưu vào Google Sheet."); })
     .withFailureHandler(function(e){ done(false,"Không lưu được: "+(e&&e.message||e)+" Có thể tài khoản này chỉ có quyền xem Sheet."); })
@@ -835,6 +836,7 @@ function saveUpdate(tab,key,items,done){
   var kc=tab==="CONG_TY"?"khoa":"id";
   function local(){ items.forEach(function(it){ var row=(DB[tab]||[]).filter(function(r){return String(r[kc])===String(it.key)})[0]; if(row) Object.keys(it.obj).forEach(function(f){row[f]=it.obj[f]}); }); refresh(); }
   if(DEMO){ local(); done(true,"Đã cập nhật trong bản xem mẫu (không lưu vào Sheet)."); return; }
+  if(!(window.google&&google.script&&google.script.run)){ done(false,"Trang này chỉ xem. Nhập và sửa dữ liệu trực tiếp trong Google Sheet."); return; }
   google.script.run
     .withSuccessHandler(function(){ local(); done(true,"Đã lưu vào Google Sheet."); })
     .withFailureHandler(function(e){ done(false,"Không lưu được: "+(e&&e.message||e)+" Có thể tài khoản này chỉ có quyền xem Sheet."); })
@@ -966,7 +968,31 @@ bindTabs(); bindPartners();
 if(window.DEMO_DB){ init(window.DEMO_DB,true); }
 else if(window.google&&google.script&&google.script.run){
   google.script.run.withSuccessHandler(function(d){init(d,false)}).withFailureHandler(function(e){showErr("<b>Không tải được dữ liệu.</b> "+esc(e&&e.message||e)+" Kiểm tra Sheet đã được chia sẻ cho tài khoản đang mở trang.")}).getData();
-}else{ showErr("Trang này chạy bằng đường link Web app của Google Apps Script. Mở đúng link web app theo hướng dẫn cài đặt."); }
+}else{
+  var SID="13D_F8RS0WjWfkBCuu3OGyI8NlgYNdhZnvI5HNET-jY4";
+  var TABS_=["NHANH","DOI_TAC","HOP_DONG","LO_HANG","HD_LIEN_KET","CONG_NO","UNG_TRUOC","NCC_THI_TRUONG","THI_TRUONG","YEU_CAU_THI_TRUONG","CONG_TY","KHAU","BUOC_DON","LIEN_HE","CAI_DAT"];
+  var DB_={}, left_=TABS_.length, bad_=null;
+  function p2(n){return (n<10?"0":"")+n}
+  function cell_(c){ if(!c||c.v===null||c.v===undefined) return "";
+    if(typeof c.v==="string"){ var m=/^Date\((\d+),(\d+),(\d+)/.exec(c.v); if(m) return m[1]+"-"+p2(+m[2]+1)+"-"+p2(+m[3]); }
+    return c.v }
+  function load_(tab){
+    var cb="__g_"+tab, sc=document.createElement("script");
+    window[cb]=function(r){
+      try{
+        if(r.status!=="ok") throw new Error("Tab "+tab+": "+((r.errors&&r.errors[0]&&r.errors[0].message)||r.status));
+        var cols=r.table.cols.map(function(c){return c.label||c.id}), rows=r.table.rows||[];
+        DB_[tab]=rows.map(function(rw){var o={}; cols.forEach(function(k,i){o[k]=cell_(rw.c&&rw.c[i])}); return o}).filter(function(o){return Object.keys(o).some(function(k){return o[k]!==""})});
+      }catch(e){ bad_=bad_||e }
+      if(--left_===0) done_();
+    };
+    sc.onerror=function(){ bad_=bad_||new Error("Không tải được tab "+tab+". Sheet cần mở quyền xem bằng link."); if(--left_===0) done_() };
+    sc.src="https://docs.google.com/spreadsheets/d/"+SID+"/gviz/tq?headers=1&tqx=out:json;responseHandler:"+cb+"&sheet="+tab;
+    document.head.appendChild(sc);
+  }
+  function done_(){ if(bad_){ showErr("<b>Không tải được dữ liệu.</b> "+esc(bad_.message||bad_)); return } init(DB_,false) }
+  TABS_.forEach(load_);
+}
 </script>
 </body>
 </html>

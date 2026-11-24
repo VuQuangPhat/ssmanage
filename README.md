@@ -10,7 +10,7 @@ Hệ thống quản lý thu mua thủy hải sản trong nước và xuất kh�
 | `apps-script/Code.gs` | Mã Apps Script: đọc Sheet (`getData`), thêm dòng (`addRow`), sửa dòng (`updateRows`). |
 | `apps-script/Index.html` | Giao diện bản thật, dán vào Apps Script với tên `Index`. Đọc dữ liệu từ Sheet qua `google.script.run`. |
 | `data/Thuy-hai-san-bo-nao.xlsx` | Sheet mẫu đủ các tab, nhập vào Google Sheet làm bộ não. |
-| `docs/Huong-dan-cai-dat.html` | Hướng dẫn cài từng bước và prompt cho Director. |
+| `` | Hướng dẫn cài từng bước và prompt cho Director. |
 
 ## Cài đặt nhanh
 
@@ -18,7 +18,7 @@ Hệ thống quản lý thu mua thủy hải sản trong nước và xuất kh�
 2. Tiện ích mở rộng > Apps Script, dán `apps-script/Code.gs`, thêm file HTML tên `Index` và dán `apps-script/Index.html`.
 3. Triển khai thành ứng dụng web, chạy dưới tên người dùng đang truy cập.
 
-Chi tiết xem `docs/Huong-dan-cai-dat.html`.
+Chi tiết xem ``.
 
 ## Lưu ý
 

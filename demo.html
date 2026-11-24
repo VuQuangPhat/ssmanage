@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quản lý thủy hải sản</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Bố cục: gốc ở trên, 7 nhánh là thẻ trong lưới co giãn; tab 2 là bảng dữ liệu NHANH (bản xem trước của Google Sheet) */
+:root{
+  --bg:#f4f7f8; --surface:#ffffff; --ink:#15262b; --muted:#5b6f75; --line:#d5e0e3; --accent:#0f5c6e; --accent-ink:#ffffff;
+  --b1:#0f5c6e; --b2:#3f6fb5; --b3:#2f8a5b; --b4:#8a5aa8; --b5:#b8741a; --b6:#c2412d; --b7:#566b73;
+  --font:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1a1e; --surface:#162529; --ink:#e6f0f2; --muted:#93a8ae; --line:#27393e; --accent:#5ec2d6; --accent-ink:#06222a;
+    --b1:#5ec2d6; --b2:#7fa6e6; --b3:#6fcf9a; --b4:#c39be0; --b5:#e6a85a; --b6:#f0836f; --b7:#a3b6bd;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1a1e; --surface:#162529; --ink:#e6f0f2; --muted:#93a8ae; --line:#27393e; --accent:#5ec2d6; --accent-ink:#06222a;
+  --b1:#5ec2d6; --b2:#7fa6e6; --b3:#6fcf9a; --b4:#c39be0; --b5:#e6a85a; --b6:#f0836f; --b7:#a3b6bd;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+.wrap{max-width:1280px;margin:0 auto;padding:20px 16px 40px}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+h1{margin:0;font-size:clamp(20px,3.2vw,28px);line-height:1.2;font-weight:700;text-wrap:balance}
+.sub{margin:4px 0 0;color:var(--muted);font-size:14px;max-width:62ch}
+nav{display:flex;gap:4px;max-width:100%;overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px}
+nav button{white-space:nowrap;font:inherit;font-weight:600;font-size:14px;color:var(--muted);background:none;border:0;border-radius:7px;padding:8px 14px;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.root-wrap{display:flex;flex-direction:column;align-items:center;margin:8px 0 0}
+.root{background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:clamp(15px,2.4vw,19px);padding:12px 22px;border-radius:999px;text-align:center;max-width:100%;overflow-wrap:anywhere}
+.stem{width:2px;height:22px;background:var(--line)}
+.bar{height:2px;background:var(--line);width:calc(100% - 40px);max-width:1180px}
+.stat{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0 4px;color:var(--muted);font-size:13px}
+.stat b{color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:14px;margin-top:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:12px;padding:14px 14px 10px;min-width:0}
+.card.focus{box-shadow:0 0 0 2px var(--c)}
+.card h2{margin:0 0 2px;font-size:16px;line-height:1.3;color:var(--c);display:flex;gap:8px;align-items:baseline;overflow-wrap:anywhere}
+.card h2 .n{font-variant-numeric:tabular-nums;font-size:13px;opacity:.85}
+.card .d{margin:0 0 8px;color:var(--muted);font-size:13px}
+.tag{display:inline-block;font-size:11px;font-weight:600;color:var(--c);border:1px solid var(--c);border-radius:999px;padding:1px 8px;margin-left:auto;white-space:nowrap}
+ul.leaves{list-style:none;margin:0;padding:0}
+ul.leaves li{border-top:1px solid var(--line)}
+ul.leaves details{padding:0}
+ul.leaves summary{cursor:pointer;list-style:none;display:flex;gap:8px;align-items:flex-start;padding:8px 2px;font-weight:500;overflow-wrap:anywhere}
+ul.leaves summary::-webkit-details-marker{display:none}
+ul.leaves summary::before{content:"";flex:0 0 8px;height:8px;margin-top:7px;border-radius:50%;background:var(--c)}
+ul.leaves summary::after{content:"+";margin-left:auto;color:var(--muted);font-weight:600}
+ul.leaves details[open] summary::after{content:"–"}
+.leafbody{padding:0 2px 10px 16px;color:var(--muted);font-size:13px}
+.leafbody p{margin:0 0 6px}
+.chip{display:inline-block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:1px 7px;margin:0 4px 4px 0;overflow-wrap:anywhere}
+.note{margin-top:22px;padding:12px 14px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:13px}
+.note b{color:var(--ink)}
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{position:sticky;top:0;background:var(--surface);color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+td.id{font-family:ui-monospace,Menlo,monospace;font-size:12px;white-space:nowrap}
+td .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);margin-right:6px}
+tr.br td{font-weight:700;background:var(--bg)}
+.hidden{display:none}
+@media (prefers-reduced-motion:no-preference){.card{transition:box-shadow .15s}}
+/* Dashboard: màu trạng thái tách riêng khỏi màu nhánh */
+:root{--crit:#b42318;--warn:#a15c07;--ok:#1d7a4a}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--crit:#ff8a7a;--warn:#f0b35a;--ok:#6fcf9a}}
+:root[data-theme="dark"]{--crit:#ff8a7a;--warn:#f0b35a;--ok:#6fcf9a}
+.asof{margin:0 0 12px;color:var(--muted);font-size:13px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--s,var(--line));border-radius:12px;padding:12px 14px;min-width:0}
+.tile .l{font-size:12px;color:var(--muted);font-weight:600;overflow-wrap:anywhere}
+.tile .v{font-size:clamp(22px,3vw,28px);font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.tile .s{font-size:12px;color:var(--muted)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px;margin-top:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
+.panel h3,h3.sec{margin:0 0 10px;font-size:15px}
+h3.sec{margin:22px 0 10px}
+ul.alerts{list-style:none;margin:0;padding:0}
+ul.alerts li{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;padding:10px 0;border-top:1px solid var(--line);align-items:start}
+ul.alerts li:first-child{border-top:0;padding-top:0}
+.pill{font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap;color:var(--c);background:color-mix(in srgb,var(--c) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 40%,var(--surface))}
+.pill.crit{--c:var(--crit)}.pill.warn{--c:var(--warn)}.pill.ok{--c:var(--ok)}
+.al-t{font-size:14px;overflow-wrap:anywhere}
+.al-t b{font-variant-numeric:tabular-nums}
+.al-a{grid-column:2;font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.rules{margin-top:10px;font-size:12.5px;color:var(--muted)}
+.rules summary{cursor:pointer;font-weight:600}
+.rules ul{margin:6px 0 0;padding-left:18px}
+.brow{display:grid;grid-template-columns:minmax(80px,120px) 1fr 54px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.brow .lab{color:var(--muted);overflow-wrap:anywhere}
+.brow .trk{height:10px;background:var(--bg);border-radius:6px;overflow:hidden;min-width:0}
+.brow .fil{height:100%;border-radius:6px;background:var(--c,var(--accent))}
+.brow .num{text-align:right;font-variant-numeric:tabular-nums}
+.sub2{font-size:12px;color:var(--muted);margin:10px 0 2px;font-weight:600}
+.pipe{display:flex;gap:3px;min-width:120px}
+.pipe i{flex:1;height:8px;border-radius:2px;background:var(--line)}
+.pipe i.done{background:var(--accent)}
+.pipe i.now{background:var(--warn)}
+.pg{display:flex;align-items:center;gap:8px;min-width:110px}
+.pg .trk{flex:1;height:8px;background:var(--bg);border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.pg .fil{height:100%;background:var(--accent)}
+.pg span{font-size:12px;font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+:root{--b8:#6b7f1f}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--b8:#c2d46a}}
+:root[data-theme="dark"]{--b8:#c2d46a}
+.tile .s{overflow-wrap:anywhere}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 10px}
+.seg{display:flex;flex-wrap:wrap;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:3px}
+.seg button{font:inherit;font-size:13px;font-weight:600;color:var(--muted);background:none;border:0;border-radius:7px;padding:6px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.ctrl input,.ctrl select{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:0}
+.ctrl input{flex:1 1 180px;max-width:320px}
+#ptab tbody tr{cursor:pointer}
+#ptab tbody tr:hover td{background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+#ptab tbody tr.sel td{background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+#ptab tbody tr:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.pill.neu{--c:var(--muted)}
+.dh{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.dh h3{margin:0;overflow-wrap:anywhere}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0}
+.dgrid>div{background:var(--bg);border-radius:8px;padding:8px 10px;min-width:0}
+.dgrid .k{font-size:11.5px;color:var(--muted)}
+.dgrid .vv{font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.dd{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
+.dd h4{margin:0 0 4px;font-size:13px;color:var(--muted)}
+.dd ul{margin:0;padding-left:18px;font-size:14px}
+.dd p{margin:0;font-size:14px;overflow-wrap:anywhere}
+.typ{font-size:11px;font-weight:700;border-radius:5px;padding:1px 7px;background:var(--bg);border:1px solid var(--line);white-space:nowrap}
+</style>
+<style>
+.al-a .chip,.leafbody .chip,.card h2 .tag{display:none}
+.tiles{grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr))}
+.tiles.bigrow{grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr))}
+.tile.big{padding:16px 18px}.tile.big .v{font-size:clamp(28px,4vw,38px)}
+@media (max-width:480px){.tiles.bigrow{grid-template-columns:1fr}.tile .v{font-size:20px}.tile.big .v{font-size:30px}}
+.board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:start;margin-top:12px}
+@media (max-width:1180px){.board{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:760px){.board{grid-template-columns:1fr}.bcol.emp{display:none}}
+.bcol{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;min-width:0}
+.bcol h4{display:flex;justify-content:space-between;gap:6px;font-size:12.5px;margin:0 0 8px;color:var(--muted)}
+.bcol h4 b{color:var(--ink)}
+.ocard{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin-bottom:8px;cursor:pointer;min-width:0;overflow-wrap:anywhere}
+.ocard:hover{border-color:var(--accent)}
+.ocard:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.oc-h{display:flex;justify-content:space-between;gap:6px;align-items:center;font-size:13px}
+.gtag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 7px;white-space:nowrap}
+.oc-p{font-size:13px;margin-top:3px}.oc-s{font-size:12px;color:var(--muted)}
+.oc-d,.oc-f{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
+.oc-b{margin-top:6px;display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted)}
+.oc-b .trk{flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden}.oc-b .fil{height:100%;background:var(--accent)}
+.empty{font-size:12px;color:var(--muted);margin:2px 0}
+.fold{margin-top:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:4px 12px}
+.fold summary{cursor:pointer;font-weight:600;padding:8px 0}
+.msec{margin:16px 0 6px;font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip2{font-size:12.5px;border:1px solid var(--line);border-radius:8px;padding:3px 9px;background:var(--bg)}
+.btn.lg{margin:8px 0;font-size:13px;padding:6px 12px}
+.legend{margin:4px 0 10px}
+.legend .tablewrap{margin:0}
+@media (max-width:640px){.lgt,.lgt tbody,.lgt tr,.lgt td{display:block;width:100%;min-width:0!important;max-width:100%;box-sizing:border-box}.lgt thead{display:none}.lgt tr{padding:8px 10px;border-bottom:1px solid var(--line)}.lgt td{border:0;padding:2px 0;white-space:normal;overflow-wrap:anywhere}.lgt td.num{display:inline;font-weight:700;margin-right:6px}.lgt td:nth-child(2){display:inline}.lgt td[data-l]::before{content:attr(data-l)": ";color:var(--muted);font-size:12px}}
+/* Phong cách theo app pháp chế: màu nền đầu trang đổi ở hero1, hero2; màu chủ đạo ở --accent */
+:root{--hero1:#e0f3f7;--hero2:#eef5fc}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--hero1:#12373f;--hero2:#122f3b}}
+:root[data-theme="dark"]{--hero1:#12373f;--hero2:#122f3b}
+.hero{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;justify-content:space-between;background:linear-gradient(135deg,var(--hero1),var(--hero2));border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:12px}
+.hero-l{display:flex;gap:14px;align-items:center;min-width:0;flex:1 1 320px}
+.logo{flex:0 0 auto;width:52px;height:52px;border-radius:14px;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:22px;overflow:hidden}
+.logo img{max-width:100%;max-height:100%;display:block}
+.kicker{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);overflow-wrap:anywhere}
+.hero h1{margin:2px 0 0}
+.author{display:flex;gap:10px;align-items:center;min-width:0}
+.avatar{flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--surface);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent)}
+.author b{display:block;font-size:14px;overflow-wrap:anywhere}
+.author span{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.btn{font:inherit;font-weight:600;font-size:14px;border-radius:10px;padding:9px 14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.actions .btn:not(.pri){font-weight:500;font-size:13px;padding:7px 11px}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tabs{display:flex;gap:2px;border-bottom:2px solid var(--line);margin:0 0 16px;overflow-x:auto}
+.tabs button{white-space:nowrap;font:inherit;font-weight:600;font-size:14.5px;color:var(--muted);background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:10px 16px;cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.tabs button:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.modal-bg{position:fixed;inset:0;background:rgba(5,20,25,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal{background:var(--surface);color:var(--ink);border-radius:16px;border:1px solid var(--line);width:min(100%,640px);max-height:100%;overflow:auto;padding:18px}
+.modal.wide{width:min(100%,920px)}
+.modal h3{margin:0 0 12px;font-size:17px}
+.mfoot{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:14px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px}
+.fgrid label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);font-weight:600;min-width:0}
+.fgrid input,.fgrid select,.fgrid textarea{font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0;width:100%}
+.fgrid .full{grid-column:1/-1}
+.fmsg{margin-top:10px;font-size:13px;overflow-wrap:anywhere}
+.slide{min-height:240px}
+.slide h4{margin:0 0 12px;font-size:20px;color:var(--accent)}
+.sl-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:14px;color:var(--muted);font-size:13px}
+.foot{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;text-align:center}
+@media (max-width:480px){.hero .sub,.author{display:none}.hero h1{font-size:19px}.tabs button{padding:10px 9px;font-size:14px}.hero{padding:14px}}
+.modal:fullscreen{width:100%;max-width:none;border-radius:0;padding:32px}
+@media print{
+  .actions,.tabs,.author{display:none!important}
+  body.modal-open .wrap{display:none}
+  body.modal-open .modal-bg{position:static;background:none;padding:0}
+  body.modal-open .modal{border:0;width:100%;max-height:none;overflow:visible}
+  .sl-nav,.mfoot{display:none!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="hero-l">
+      <div class="logo" id="logo" aria-hidden="true"></div>
+      <div style="min-width:0">
+        <div class="kicker" id="kicker">✦ HỆ THỐNG QUẢN LÝ</div>
+        <h1 id="title">Quản lý thu mua – xuất khẩu thủy hải sản</h1>
+        <p class="sub" id="subtitle">Số liệu đọc từ Google Sheet; nội dung và ngưỡng cảnh báo sửa ở Sheet.</p>
+      </div>
+    </div>
+    <div class="author" id="author"></div>
+  </header>
+  <div class="tabs" role="tablist" aria-label="Chọn trang">
+    <button role="tab" id="t-dash" aria-selected="true" aria-controls="p-dash">Đơn hàng</button>
+    <button role="tab" id="t-part" aria-selected="false" aria-controls="p-part">Đối tác</button>
+    <button role="tab" id="t-fin" aria-selected="false" aria-controls="p-fin">Tài chính</button>
+    <button role="tab" id="t-co" aria-selected="false" aria-controls="p-co">Công ty</button>
+    <button role="tab" id="t-map" class="hidden" aria-selected="false" aria-controls="p-map">Sơ đồ</button>
+    <button role="tab" id="t-data" class="hidden" aria-selected="false" aria-controls="p-data">Cấu trúc</button>
+  </div>
+  <div class="actions hidden" id="actions">
+    <button type="button" class="btn pri" id="a-hd">+ Thêm hợp đồng</button>
+    <button type="button" class="btn" id="a-lh">Ghi lần làm việc</button>
+    <button type="button" class="btn" id="a-dm">Danh mục</button>
+  </div>
+
+  <div id="banner" class="note hidden" style="margin:0 0 14px"></div>
+  <p id="loading" class="asof">Đang tải dữ liệu từ Google Sheet…</p>
+  <div id="err" class="note hidden" style="border-style:solid;border-color:var(--crit);color:var(--ink)"></div>
+
+  <div id="app" class="hidden">
+    <section id="p-map" role="tabpanel" aria-labelledby="t-map" class="hidden">
+      <div class="root-wrap">
+        <div class="root">Thu mua – Xuất khẩu thủy hải sản</div>
+        <div class="stem"></div>
+        <div class="bar"></div>
+      </div>
+      <div class="stat" id="stat"></div>
+      <div class="grid" id="grid"></div>
+      <div class="note">Cây nhánh lấy từ tab <span class="chip">NHANH</span>. Mỗi mục trỏ tới một tab dữ liệu (chip viết hoa). Nhánh có trạng thái "Trọng tâm" được viền nổi và mở sẵn.</div>
+    </section>
+
+    <section id="p-dash" role="tabpanel" aria-labelledby="t-dash">
+      <p class="asof" id="asof"></p>
+      <div class="tiles bigrow" id="tiles-big"></div>
+      <div class="tiles" id="tiles" style="margin-top:12px"></div>
+      <div class="cols">
+        <div class="panel">
+          <h3>Cần xử lý ngay</h3>
+          <ul class="alerts" id="alerts"></ul>
+          <details class="fold hidden" id="amore"><summary id="amore-s"></summary><ul class="alerts" id="alerts2"></ul></details>
+          <details class="rules"><summary>Quy tắc tạo cảnh báo</summary><ul id="rules"></ul></details>
+        </div>
+        <div class="panel">
+          <h3>Sản lượng bán theo nhóm thị trường (tấn)</h3>
+          <div id="mkt"></div>
+        </div>
+      </div>
+      <h3 class="sec">Đơn hàng theo bước</h3>
+      <div class="seg" id="ogrp" role="group" aria-label="Lọc theo thị trường"></div>
+      <button type="button" class="btn lg" id="tg-buoc" aria-expanded="false">Hiện mô tả 6 bước</button>
+      <div id="buoc-legend" class="legend hidden"></div>
+      <div id="board"></div>
+      <details class="fold"><summary>Bảng lô hàng</summary><button type="button" class="btn lg" id="tg-khau" aria-expanded="false">Hiện mô tả 6 khâu</button><div id="khau-legend" class="legend hidden"></div><div class="tablewrap"><table id="lots" style="min-width:960px"></table></div></details>
+      <details class="fold"><summary>Bảng hợp đồng</summary><div class="tablewrap"><table id="cts" style="min-width:1160px"></table></div></details>
+      <div class="note">Số liệu đọc từ các tab <span class="chip">HOP_DONG</span> <span class="chip">LO_HANG</span> <span class="chip">HD_LIEN_KET</span> <span class="chip">THI_TRUONG</span>. Ngưỡng cảnh báo sửa ở tab <span class="chip">CAI_DAT</span>.</div>
+    </section>
+
+    <section id="p-fin" role="tabpanel" aria-labelledby="t-fin" class="hidden">
+      <div class="tiles" id="ftiles"></div>
+      <div class="cols" style="margin-top:14px">
+        <div class="panel"><h3>Công nợ theo tuổi nợ (tỷ đồng)</h3><div id="aging"></div></div>
+        <div class="panel"><h3>Tiền đang ứng trước cho nhà cung cấp</h3><div class="tablewrap"><table id="advtab" style="min-width:0"></table></div></div>
+      </div>
+      <h3 class="sec">Biên lợi nhuận theo đơn</h3>
+      <div class="tablewrap"><table id="mgtab" style="min-width:0"></table></div>
+      <div class="note">Biên của đơn là trung bình theo khối lượng của các lô đã có giá vốn và giá bán (tab <span class="chip">LO_HANG</span>). Công nợ từ <span class="chip">CONG_NO</span>, tiền ứng từ <span class="chip">UNG_TRUOC</span>.</div>
+    </section>
+
+    <section id="p-co" role="tabpanel" aria-labelledby="t-co" class="hidden">
+      <div class="panel"><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px"><h3 style="margin:0">Hồ sơ công ty</h3><button type="button" class="btn pri" id="a-co">Sửa thông tin</button></div><div class="dgrid" id="coinfo"></div></div>
+      <div class="note">Thông tin đọc từ tab <span class="chip">CONG_TY</span> của Google Sheet; sửa ở đó, mở lại trang là cập nhật.</div>
+    </section>
+
+    <section id="p-part" role="tabpanel" aria-labelledby="t-part" class="hidden">
+      <p class="asof" id="pasof"></p>
+      <div class="tiles" id="ptiles"></div>
+      <div class="panel" id="pdetail" style="margin-top:14px"></div>
+      <div class="ctrl">
+        <div class="seg" id="pseg" role="group" aria-label="Lọc đối tác">
+          <button type="button" data-f="all" aria-pressed="true">Tất cả</button>
+          <button type="button" data-f="K" aria-pressed="false">Khách mua</button>
+          <button type="button" data-f="N" aria-pressed="false">Nhà cung cấp</button>
+          <button type="button" data-f="risk" aria-pressed="false">Rủi ro</button>
+        </div>
+        <input id="psearch" type="search" placeholder="Tìm tên đối tác" aria-label="Tìm tên đối tác">
+        <select id="psort" aria-label="Sắp xếp">
+          <option value="risk">Rủi ro trước</option>
+          <option value="value">Giá trị năm cao nhất</option>
+          <option value="debt">Nợ quá hạn nhiều nhất</option>
+          <option value="idle">Lâu chưa làm việc nhất</option>
+        </select>
+      </div>
+      <div class="tablewrap"><table id="ptab" style="min-width:940px"></table></div>
+      <div class="note"><b>Cách xếp hạng (tự tính, không nhập tay).</b> <span id="prules"></span> Dữ liệu đọc từ các tab <span class="chip">DOI_TAC</span> <span class="chip">CONG_NO</span> <span class="chip">LIEN_HE</span>; ngưỡng ở tab <span class="chip">CAI_DAT</span>.</div>
+    </section>
+
+    <section id="p-data" role="tabpanel" aria-labelledby="t-data" class="hidden">
+      <p class="sub" style="margin-bottom:12px">Nội dung tab <b>NHANH</b> của Google Sheet: mỗi dòng là một nhánh hoặc một mục.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>id</th><th>nhánh cha</th><th>tên</th><th>mô tả</th><th>tab dữ liệu</th><th>ưu tiên</th><th>trạng thái</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table></div>
+    </section>
+  </div>
+  <div class="foot hidden" id="foot"></div>
+</div>
+
+<script>
+window.DEMO_DB={"NHANH": [{"id": "B1", "nhanh_cha": "", "ten": "Nguồn cung", "mo_ta": "Ai bán, nuôi hoặc đánh bắt ở đâu, truy xuất được không.", "tab_du_lieu": "", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B1.1", "nhanh_cha": "B1", "ten": "Nhà cung cấp và thương lái", "mo_ta": "Danh sách, năng lực cung ứng, lịch sử giao hàng, mức ứng tiền trước.", "tab_du_lieu": "NHA_CUNG_CAP", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B1.2", "nhanh_cha": "B1", "ten": "Vùng nuôi, tàu cá", "mo_ta": "Địa điểm, loại hình, sản lượng theo mùa vụ.", "tab_du_lieu": "NGUON_CUNG", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B1.3", "nhanh_cha": "B1", "ten": "Hồ sơ truy xuất và IUU", "mo_ta": "Nhật ký khai thác, hồ sơ vùng nuôi, tình trạng đủ hay thiếu theo từng lô.", "tab_du_lieu": "TRUY_XUAT", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B2", "nhanh_cha": "", "ten": "Chế biến và bảo quản", "mo_ta": "Từ nguyên liệu thành hàng xuất được, giữ lạnh đến lúc lên tàu.", "tab_du_lieu": "", "uu_tien": "Trung bình", "trang_thai": "Đang dùng"}, {"id": "B2.1", "nhanh_cha": "B2", "ten": "Cơ sở chế biến", "mo_ta": "Nhà máy gia công, mã số cơ sở xuất khẩu, công suất.", "tab_du_lieu": "CO_SO_CHE_BIEN", "uu_tien": "Trung bình", "trang_thai": "Đang dùng"}, {"id": "B2.2", "nhanh_cha": "B2", "ten": "Chuỗi lạnh và kho", "mo_ta": "Kho lạnh, nhiệt độ, thời gian lưu kho.", "tab_du_lieu": "KHO_LANH", "uu_tien": "Trung bình", "trang_thai": "Đang dùng"}, {"id": "B2.3", "nhanh_cha": "B2", "ten": "Hao hụt", "mo_ta": "Tỷ lệ hao hụt theo lô và theo nhà cung cấp.", "tab_du_lieu": "LO_HANG", "uu_tien": "Trung bình", "trang_thai": "Đang dùng"}, {"id": "B3", "nhanh_cha": "", "ten": "Chất lượng", "mo_ta": "Hàng có đạt chuẩn của khách và của nước nhập khẩu không.", "tab_du_lieu": "", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B3.1", "nhanh_cha": "B3", "ten": "Kiểm nghiệm dư lượng", "mo_ta": "Kết quả kháng sinh, kim loại nặng, phụ gia theo lô.", "tab_du_lieu": "KIEM_NGHIEM", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B3.2", "nhanh_cha": "B3", "ten": "Tiêu chuẩn size, net weight, glazing", "mo_ta": "Chuẩn đã thỏa thuận với khách, sai lệch cho phép.", "tab_du_lieu": "TIEU_CHUAN", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B3.3", "nhanh_cha": "B3", "ten": "Cảnh báo và hàng bị trả về", "mo_ta": "Lô bị cảnh báo, nguyên nhân, cách xử lý.", "tab_du_lieu": "SU_CO", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B4", "nhanh_cha": "", "ten": "Thị trường và hồ sơ xuất khẩu", "mo_ta": "Mỗi nước một bộ yêu cầu và một bộ chứng từ.", "tab_du_lieu": "", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B4.1", "nhanh_cha": "B4", "ten": "Yêu cầu theo từng nước", "mo_ta": "Mỹ, EU, Trung Quốc, Nhật, Hàn: điều kiện nhập khẩu, thuế, cảnh báo mới.", "tab_du_lieu": "THI_TRUONG", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B4.2", "nhanh_cha": "B4", "ten": "Bộ chứng từ", "mo_ta": "Hóa đơn, packing list, vận đơn, chứng nhận xuất xứ, theo từng lô.", "tab_du_lieu": "CHUNG_TU", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B4.3", "nhanh_cha": "B4", "ten": "Kiểm dịch và chứng nhận", "mo_ta": "Chứng nhận y tế, chứng nhận khai thác, trạng thái cấp.", "tab_du_lieu": "CHUNG_TU", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B5", "nhanh_cha": "", "ten": "Logistics, thanh toán và thuế", "mo_ta": "Hàng đi, tiền về, thuế đúng.", "tab_du_lieu": "", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B5.1", "nhanh_cha": "B5", "ten": "Vận chuyển và Incoterms", "mo_ta": "Hãng tàu, lịch tàu, điều kiện giao hàng, container lạnh.", "tab_du_lieu": "VAN_CHUYEN", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B5.2", "nhanh_cha": "B5", "ten": "Thanh toán và công nợ", "mo_ta": "L/C, TT, phải thu, phải trả, tuổi nợ.", "tab_du_lieu": "CONG_NO", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B5.3", "nhanh_cha": "B5", "ten": "Tỷ giá", "mo_ta": "Tỷ giá chốt theo hợp đồng và chênh lệch thực tế.", "tab_du_lieu": "TY_GIA", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B5.4", "nhanh_cha": "B5", "ten": "Hoàn thuế GTGT và bảng kê thu mua", "mo_ta": "Hồ sơ hoàn thuế, chứng từ thanh toán qua ngân hàng, bảng kê khi mua từ người sản xuất.", "tab_du_lieu": "THUE", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B6", "nhanh_cha": "", "ten": "Hợp đồng", "mo_ta": "Mỗi hợp đồng một dòng, nối với các lô hàng thuộc về nó.", "tab_du_lieu": "", "uu_tien": "Cao", "trang_thai": "Trọng tâm"}, {"id": "B6.1", "nhanh_cha": "B6", "ten": "HĐ mua", "mo_ta": "Với nhà cung cấp và thương lái.", "tab_du_lieu": "HOP_DONG", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B6.2", "nhanh_cha": "B6", "ten": "HĐ bán xuất khẩu", "mo_ta": "Với khách nước ngoài.", "tab_du_lieu": "HOP_DONG", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B6.3", "nhanh_cha": "B6", "ten": "HĐ dịch vụ", "mo_ta": "Vận chuyển, kho lạnh, giám định.", "tab_du_lieu": "HOP_DONG", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B6.4", "nhanh_cha": "B6", "ten": "Key của mỗi hợp đồng", "mo_ta": "Bên ký, sản phẩm, size, số lượng, giá, Incoterms, thanh toán, thời hạn giao, mức phạt.", "tab_du_lieu": "HOP_DONG", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B6.5", "nhanh_cha": "B6", "ten": "Mốc thời hạn và nhắc việc", "mo_ta": "Hạn giao, hạn thanh toán, ngày hết hạn; hợp đồng sắp đến hạn tự nổi lên.", "tab_du_lieu": "HOP_DONG", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B6.6", "nhanh_cha": "B6", "ten": "Tiến độ thực hiện", "mo_ta": "Đã giao, đã nhận, đã thu, đã trả. Cột HĐ mua và HĐ bán nằm trong tab lô hàng.", "tab_du_lieu": "LO_HANG", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B6.7", "nhanh_cha": "B6", "ten": "Phụ lục, sửa đổi, khiếu nại", "mo_ta": "Các thay đổi sau ký và khiếu nại của khách.", "tab_du_lieu": "HOP_DONG", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B6.8", "nhanh_cha": "B6", "ten": "Liên kết HĐ mua và HĐ bán", "mo_ta": "Một HĐ bán được cấp nguồn từ nhiều HĐ mua, ghi khối lượng từng phần; tự tính độ phủ nguồn và cảnh báo khi thiếu.", "tab_du_lieu": "HD_LIEN_KET", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B7", "nhanh_cha": "", "ten": "Rủi ro và báo cáo", "mo_ta": "Điều gì có thể hỏng và báo cáo gì về trụ sở.", "tab_du_lieu": "", "uu_tien": "Trung bình", "trang_thai": "Đang dùng"}, {"id": "B7.1", "nhanh_cha": "B7", "ten": "Kịch bản rủi ro", "mo_ta": "Hàng bị cảnh báo hoặc trả về, nhà cung cấp vi phạm, chậm giao, biến động giá và tỷ giá.", "tab_du_lieu": "RUI_RO", "uu_tien": "Trung bình", "trang_thai": "Đang dùng"}, {"id": "B7.2", "nhanh_cha": "B7", "ten": "Sự cố và cảnh báo", "mo_ta": "Nhật ký sự cố và cách đã xử lý.", "tab_du_lieu": "SU_CO", "uu_tien": "Trung bình", "trang_thai": "Đang dùng"}, {"id": "B7.3", "nhanh_cha": "B7", "ten": "Báo cáo về trụ sở", "mo_ta": "Tách số liệu đã xác minh và số liệu ước tính.", "tab_du_lieu": "BAO_CAO", "uu_tien": "Trung bình", "trang_thai": "Đang dùng"}, {"id": "B8", "nhanh_cha": "", "ten": "Đối tác", "mo_ta": "Khách mua và nhà cung cấp trong một danh sách, mỗi đối tác một dòng, xếp hạng tự tính.", "tab_du_lieu": "", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B8.1", "nhanh_cha": "B8", "ten": "Hồ sơ đối tác", "mo_ta": "Loại (khách mua hoặc nhà cung cấp), khu vực, đầu mối, điều kiện hợp tác, yêu cầu riêng.", "tab_du_lieu": "DOI_TAC", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B8.2", "nhanh_cha": "B8", "ten": "Xếp hạng và lý do", "mo_ta": "Rủi ro, Theo dõi, Ổn định, Phát triển; tự tính từ công nợ, đúng hạn, khiếu nại, chất lượng, độ lâu chưa làm việc.", "tab_du_lieu": "DOI_TAC", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B8.3", "nhanh_cha": "B8", "ten": "Công nợ theo đối tác", "mo_ta": "Khách nợ mình, mình nợ nhà cung cấp, tuổi nợ.", "tab_du_lieu": "CONG_NO", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B8.4", "nhanh_cha": "B8", "ten": "Lịch sử làm việc", "mo_ta": "Các lần gặp, trao đổi, cam kết và việc cần theo dõi.", "tab_du_lieu": "LIEN_HE", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B8.5", "nhanh_cha": "B8", "ten": "Khiếu nại và chất lượng theo đối tác", "mo_ta": "Số khiếu nại, tỷ lệ lô đạt chất lượng, sự cố.", "tab_du_lieu": "SU_CO", "uu_tien": "Cao", "trang_thai": "Đang dùng"}, {"id": "B8.6", "nhanh_cha": "B8", "ten": "Mức độ tập trung", "mo_ta": "Tỷ trọng khách lớn nhất và nhà cung cấp lớn nhất, để thấy phụ thuộc quá nhiều vào một đối tác.", "tab_du_lieu": "DOI_TAC", "uu_tien": "Cao", "trang_thai": "Đang dùng"}], "DOI_TAC": [{"id": "DT-001", "loai": "Khách mua", "ten": "Khách Mỹ A (mẫu)", "khu_vuc": "Mỹ", "gia_tri_nam_ty": 8.2, "ty_le_dung_han": 98, "chi_so_chat_luong": 0, "ghi_chu": "Đặt đều theo quý, ưu tiên tôm PTO", "nhom": ""}, {"id": "DT-002", "loai": "Khách mua", "ten": "Khách Mỹ B (mẫu)", "khu_vuc": "Mỹ", "gia_tri_nam_ty": 3.1, "ty_le_dung_han": 85, "chi_so_chat_luong": 1, "ghi_chu": "Trả chậm hai kỳ liên tiếp", "nhom": ""}, {"id": "DT-003", "loai": "Khách mua", "ten": "Khách Singapore A (mẫu)", "khu_vuc": "Singapore", "gia_tri_nam_ty": 5.6, "ty_le_dung_han": 96, "chi_so_chat_luong": 2, "ghi_chu": "Khắt khe về size và glazing", "nhom": ""}, {"id": "DT-004", "loai": "Khách mua", "ten": "Khách Singapore B (mẫu)", "khu_vuc": "Singapore", "gia_tri_nam_ty": 2.2, "ty_le_dung_han": 100, "chi_so_chat_luong": 0, "ghi_chu": "Mới bắt đầu, đơn nhỏ", "nhom": ""}, {"id": "DT-005", "loai": "Khách mua", "ten": "Khách Thái Lan A (mẫu)", "khu_vuc": "Thái Lan", "gia_tri_nam_ty": 1.4, "ty_le_dung_han": 92, "chi_so_chat_luong": 0, "ghi_chu": "Chưa đặt hàng từ tháng 9", "nhom": ""}, {"id": "DT-006", "loai": "Khách mua", "ten": "Khách EU A (mẫu)", "khu_vuc": "EU", "gia_tri_nam_ty": 2.0, "ty_le_dung_han": 90, "chi_so_chat_luong": 1, "ghi_chu": "Yêu cầu chứng nhận khai thác cho mực", "nhom": ""}, {"id": "DT-007", "loai": "Khách mua", "ten": "Khách EU B (mẫu)", "khu_vuc": "EU", "gia_tri_nam_ty": 0.8, "ty_le_dung_han": 70, "chi_so_chat_luong": 3, "ghi_chu": "Khiếu nại ba lần về hao hụt", "nhom": ""}, {"id": "DT-008", "loai": "Khách mua", "ten": "Khách Trung Quốc A (mẫu)", "khu_vuc": "Trung Quốc", "gia_tri_nam_ty": 6.4, "ty_le_dung_han": 91, "chi_so_chat_luong": 0, "ghi_chu": "Đơn lớn, thanh toán TT 30 ngày", "nhom": ""}, {"id": "DT-009", "loai": "Khách mua", "ten": "Khách Trung Quốc B (mẫu)", "khu_vuc": "Trung Quốc", "gia_tri_nam_ty": 1.1, "ty_le_dung_han": 100, "chi_so_chat_luong": 0, "ghi_chu": "Lâu chưa liên hệ", "nhom": ""}, {"id": "DT-010", "loai": "Khách mua", "ten": "Khách Malaysia A (mẫu)", "khu_vuc": "Malaysia", "gia_tri_nam_ty": 0.9, "ty_le_dung_han": 97, "chi_so_chat_luong": 0, "ghi_chu": "Quan tâm cá tra phi lê", "nhom": ""}, {"id": "DT-011", "loai": "Nhà cung cấp", "ten": "Nhà cung cấp Cà Mau (mẫu)", "khu_vuc": "Cà Mau", "gia_tri_nam_ty": 2.8, "ty_le_dung_han": 88, "chi_so_chat_luong": 96, "ghi_chu": "Giao trễ ở đợt gần nhất", "nhom": "Cơ sở nuôi"}, {"id": "DT-012", "loai": "Nhà cung cấp", "ten": "Nhà cung cấp Bạc Liêu (mẫu)", "khu_vuc": "Bạc Liêu", "gia_tri_nam_ty": 1.4, "ty_le_dung_han": 97, "chi_so_chat_luong": 99, "ghi_chu": "Chất lượng ổn, giá cao hơn khoảng 2%", "nhom": "Cơ sở nuôi"}, {"id": "DT-013", "loai": "Nhà cung cấp", "ten": "Nhà cung cấp Sóc Trăng (mẫu)", "khu_vuc": "Sóc Trăng", "gia_tri_nam_ty": 3.5, "ty_le_dung_han": 94, "chi_so_chat_luong": 91, "ghi_chu": "Cá tra, có một lô bị cảnh báo", "nhom": "Cơ sở nuôi"}, {"id": "DT-014", "loai": "Nhà cung cấp", "ten": "Thương lái Kiên Giang (mẫu)", "khu_vuc": "Kiên Giang", "gia_tri_nam_ty": 0.9, "ty_le_dung_han": 60, "chi_so_chat_luong": 82, "ghi_chu": "Hai lần giao thiếu số lượng, chưa có hồ sơ truy xuất", "nhom": "Thương lái"}, {"id": "DT-015", "loai": "Nhà cung cấp", "ten": "Nhà cung cấp Cà Mau B (mẫu)", "khu_vuc": "Cà Mau", "gia_tri_nam_ty": 2.6, "ty_le_dung_han": 99, "chi_so_chat_luong": 98, "ghi_chu": "Có thể mở rộng khối lượng", "nhom": "Cơ sở nuôi"}, {"id": "DT-016", "loai": "Nhà cung cấp", "ten": "Nhà cung cấp Bến Tre (mẫu)", "khu_vuc": "Bến Tre", "gia_tri_nam_ty": 0.7, "ty_le_dung_han": 95, "chi_so_chat_luong": 97, "ghi_chu": "Nghêu, hàng theo mùa", "nhom": "Cơ sở nuôi"}, {"id": "DT-017", "loai": "Nhà cung cấp", "ten": "Nhà cung cấp Trà Vinh (mẫu)", "khu_vuc": "Trà Vinh", "gia_tri_nam_ty": 1.2, "ty_le_dung_han": 93, "chi_so_chat_luong": 95, "ghi_chu": "", "nhom": "Cơ sở nuôi"}, {"id": "DT-018", "loai": "Nhà cung cấp", "ten": "Nhà cung cấp Cần Thơ (mẫu)", "khu_vuc": "Cần Thơ", "gia_tri_nam_ty": 2.4, "ty_le_dung_han": 96, "chi_so_chat_luong": 98, "ghi_chu": "Cá tra, đạt đều", "nhom": "Cơ sở nuôi"}, {"id": "DT-019", "loai": "Nhà cung cấp", "ten": "Nhà cung cấp An Giang (mẫu)", "khu_vuc": "An Giang", "gia_tri_nam_ty": 0.6, "ty_le_dung_han": 90, "chi_so_chat_luong": 93, "ghi_chu": "Mình trả chậm, nhà cung cấp đã nhắc nhiều lần", "nhom": "Cơ sở nuôi"}, {"id": "DT-020", "loai": "Nhà cung cấp", "ten": "Nhà cung cấp Đồng Tháp (mẫu)", "khu_vuc": "Đồng Tháp", "gia_tri_nam_ty": 1.0, "ty_le_dung_han": 98, "chi_so_chat_luong": 96, "ghi_chu": "Lâu chưa làm việc", "nhom": "Cơ sở nuôi"}, {"id": "DT-021", "loai": "Nhà cung cấp", "ten": "Nhà cung cấp Khánh Hòa (mẫu)", "khu_vuc": "Khánh Hòa", "gia_tri_nam_ty": 1.6, "ty_le_dung_han": 92, "chi_so_chat_luong": 94, "ghi_chu": "Hải sản khai thác, cần kiểm tra IUU", "nhom": "Tàu cá"}, {"id": "DT-022", "loai": "Nhà cung cấp", "ten": "Nhà cung cấp Bình Định (mẫu)", "khu_vuc": "Bình Định", "gia_tri_nam_ty": 0.5, "ty_le_dung_han": 100, "chi_so_chat_luong": 100, "ghi_chu": "Tàu cá, hồ sơ đủ", "nhom": "Tàu cá"}, {"id": "DT-023", "loai": "Nhà cung cấp", "ten": "Nhà cung cấp Ninh Thuận (mẫu)", "khu_vuc": "Ninh Thuận", "gia_tri_nam_ty": 1.3, "ty_le_dung_han": 85, "chi_so_chat_luong": 88, "ghi_chu": "Giao trễ, tỷ lệ đạt QC thấp", "nhom": "Cơ sở chế biến"}, {"id": "DT-024", "loai": "Nhà cung cấp", "ten": "Nhà cung cấp Vũng Tàu (mẫu)", "khu_vuc": "Vũng Tàu", "gia_tri_nam_ty": 0.4, "ty_le_dung_han": 97, "chi_so_chat_luong": 97, "ghi_chu": "Mực, giao nhỏ lẻ", "nhom": "Tàu cá"}], "HOP_DONG": [{"id": "HDB-001", "loai": "bán", "doi_tac": "Khách Mỹ A (mẫu)", "san_pham": "Tôm thẻ PTO 31/40", "khoi_luong_tan": 25, "don_gia": 9.8, "tien_te": "USD", "han_giao": "2026-12-10", "het_han": "2026-12-31", "tien_do_pct": 60, "thi_truong": "Mỹ", "ngay_ky": ""}, {"id": "HDB-002", "loai": "bán", "doi_tac": "Khách Singapore A (mẫu)", "san_pham": "Cá tra phi lê", "khoi_luong_tan": 40, "don_gia": 3.1, "tien_te": "USD", "han_giao": "2026-11-30", "het_han": "2026-12-15", "tien_do_pct": 85, "thi_truong": "Singapore", "ngay_ky": ""}, {"id": "HDB-003", "loai": "bán", "doi_tac": "Khách EU A (mẫu)", "san_pham": "Mực ống làm sạch", "khoi_luong_tan": 12, "don_gia": 6.4, "tien_te": "USD", "han_giao": "2026-12-20", "het_han": "2027-01-31", "tien_do_pct": 10, "thi_truong": "EU", "ngay_ky": "2026-11-05"}, {"id": "HDM-001", "loai": "mua", "doi_tac": "Nhà cung cấp Cà Mau (mẫu)", "san_pham": "Tôm thẻ nguyên liệu", "khoi_luong_tan": 15, "don_gia": 135000, "tien_te": "VND", "han_giao": "2026-11-28", "het_han": "2026-12-05", "tien_do_pct": 70, "thi_truong": "", "ngay_ky": ""}, {"id": "HDM-004", "loai": "mua", "doi_tac": "Nhà cung cấp Bạc Liêu (mẫu)", "san_pham": "Tôm thẻ nguyên liệu", "khoi_luong_tan": 10, "don_gia": 138000, "tien_te": "VND", "han_giao": "2026-12-02", "het_han": "2026-12-20", "tien_do_pct": 30, "thi_truong": "", "ngay_ky": ""}, {"id": "HDM-002", "loai": "mua", "doi_tac": "Nhà cung cấp Sóc Trăng (mẫu)", "san_pham": "Cá tra nguyên liệu", "khoi_luong_tan": 40, "don_gia": 27000, "tien_te": "VND", "han_giao": "2026-11-26", "het_han": "2026-11-30", "tien_do_pct": 90, "thi_truong": "", "ngay_ky": ""}, {"id": "HDM-003", "loai": "mua", "doi_tac": "Thương lái Kiên Giang (mẫu)", "san_pham": "Mực ống", "khoi_luong_tan": 8, "don_gia": 98000, "tien_te": "VND", "han_giao": "2026-12-15", "het_han": "2027-01-15", "tien_do_pct": 0, "thi_truong": "", "ngay_ky": ""}, {"id": "HDV-001", "loai": "dịch vụ", "doi_tac": "Kho lạnh Cát Lái (mẫu)", "san_pham": "Dịch vụ kho lạnh", "khoi_luong_tan": "", "don_gia": "", "tien_te": "", "han_giao": "", "het_han": "2026-12-04", "tien_do_pct": "", "thi_truong": "", "ngay_ky": ""}, {"id": "HDB-004", "loai": "bán", "doi_tac": "Khách Malaysia A (mẫu)", "san_pham": "Cá tra phi lê", "khoi_luong_tan": 12, "don_gia": 3.0, "tien_te": "USD", "han_giao": "2027-01-20", "het_han": "2027-02-10", "tien_do_pct": 0, "thi_truong": "Malaysia", "ngay_ky": "2026-11-10"}], "LO_HANG": [{"id": "L-2611-01", "san_pham": "Tôm PTO 31/40", "thi_truong": "Mỹ", "hd_mua": "HDM-001", "hd_ban": "HDB-001", "khoi_luong_tan": 10, "khau": 4, "so_chung_tu_du": 3, "tong_chung_tu": "", "ket_qua_qc": "Chờ KQ", "gia_von_usd_kg": 6.2, "gia_ban_usd_kg": 7.1, "hao_hut_pct": 6}, {"id": "L-2611-02", "san_pham": "Cá tra phi lê", "thi_truong": "Singapore", "hd_mua": "HDM-002", "hd_ban": "HDB-002", "khoi_luong_tan": 34, "khau": 5, "so_chung_tu_du": 6, "tong_chung_tu": "", "ket_qua_qc": "Đạt", "gia_von_usd_kg": 2.1, "gia_ban_usd_kg": 2.4, "hao_hut_pct": 7}, {"id": "L-2611-03", "san_pham": "Tôm PTO 31/40", "thi_truong": "Mỹ", "hd_mua": "HDM-004", "hd_ban": "HDB-001", "khoi_luong_tan": 3, "khau": 2, "so_chung_tu_du": 1, "tong_chung_tu": "", "ket_qua_qc": "Chờ KQ", "gia_von_usd_kg": 6.5, "gia_ban_usd_kg": 7.1, "hao_hut_pct": 9}, {"id": "L-2611-04", "san_pham": "Mực ống làm sạch", "thi_truong": "EU", "hd_mua": "HDM-003", "hd_ban": "HDB-003", "khoi_luong_tan": 0, "khau": 1, "so_chung_tu_du": 0, "tong_chung_tu": "", "ket_qua_qc": "Chưa có", "gia_von_usd_kg": "", "gia_ban_usd_kg": "", "hao_hut_pct": ""}, {"id": "L-2610-09", "san_pham": "Cá tra phi lê", "thi_truong": "Singapore", "hd_mua": "HDM-002", "hd_ban": "HDB-002", "khoi_luong_tan": 6, "khau": 6, "so_chung_tu_du": 6, "tong_chung_tu": "", "ket_qua_qc": "Cảnh báo", "gia_von_usd_kg": 2.2, "gia_ban_usd_kg": 2.15, "hao_hut_pct": 12}], "HD_LIEN_KET": [{"hd_ban": "HDB-001", "hd_mua": "HDM-001", "khoi_luong_tan": 15}, {"hd_ban": "HDB-001", "hd_mua": "HDM-004", "khoi_luong_tan": 10}, {"hd_ban": "HDB-002", "hd_mua": "HDM-002", "khoi_luong_tan": 40}, {"hd_ban": "HDB-003", "hd_mua": "HDM-003", "khoi_luong_tan": 8}], "CONG_NO": [{"id": "CN-001", "doi_tac": "Khách Mỹ A (mẫu)", "loai": "phải thu", "so_tien_ty": 1.5, "han_thanh_toan": "2026-12-05", "da_thanh_toan": "không"}, {"id": "CN-002", "doi_tac": "Khách Singapore A (mẫu)", "loai": "phải thu", "so_tien_ty": 1.0, "han_thanh_toan": "2026-12-12", "da_thanh_toan": "không"}, {"id": "CN-003", "doi_tac": "Khách Trung Quốc A (mẫu)", "loai": "phải thu", "so_tien_ty": 0.7, "han_thanh_toan": "2026-12-20", "da_thanh_toan": "không"}, {"id": "CN-004", "doi_tac": "Khách Mỹ B (mẫu)", "loai": "phải thu", "so_tien_ty": 0.6, "han_thanh_toan": "2026-10-13", "da_thanh_toan": "không"}, {"id": "CN-005", "doi_tac": "Khách EU A (mẫu)", "loai": "phải thu", "so_tien_ty": 0.6, "han_thanh_toan": "2026-11-04", "da_thanh_toan": "không"}, {"id": "CN-006", "doi_tac": "Khách Trung Quốc A (mẫu)", "loai": "phải thu", "so_tien_ty": 0.5, "han_thanh_toan": "2026-11-06", "da_thanh_toan": "không"}, {"id": "CN-007", "doi_tac": "Khách Singapore B (mẫu)", "loai": "phải thu", "so_tien_ty": 0.4, "han_thanh_toan": "2026-11-01", "da_thanh_toan": "có"}, {"id": "CN-008", "doi_tac": "Nhà cung cấp Cà Mau (mẫu)", "loai": "phải trả", "so_tien_ty": 1.0, "han_thanh_toan": "2026-12-03", "da_thanh_toan": "không"}, {"id": "CN-009", "doi_tac": "Nhà cung cấp Bạc Liêu (mẫu)", "loai": "phải trả", "so_tien_ty": 0.4, "han_thanh_toan": "2026-12-10", "da_thanh_toan": "không"}, {"id": "CN-010", "doi_tac": "Nhà cung cấp Cần Thơ (mẫu)", "loai": "phải trả", "so_tien_ty": 1.0, "han_thanh_toan": "2026-12-15", "da_thanh_toan": "không"}, {"id": "CN-011", "doi_tac": "Nhà cung cấp Sóc Trăng (mẫu)", "loai": "phải trả", "so_tien_ty": 0.3, "han_thanh_toan": "2026-11-12", "da_thanh_toan": "không"}, {"id": "CN-012", "doi_tac": "Nhà cung cấp An Giang (mẫu)", "loai": "phải trả", "so_tien_ty": 0.3, "han_thanh_toan": "2026-10-20", "da_thanh_toan": "không"}, {"id": "CN-013", "doi_tac": "Nhà cung cấp Ninh Thuận (mẫu)", "loai": "phải trả", "so_tien_ty": 0.6, "han_thanh_toan": "2026-11-04", "da_thanh_toan": "không"}], "UNG_TRUOC": [{"id": "UT-001", "doi_tac": "Thương lái Kiên Giang (mẫu)", "so_tien_ty": 0.4, "ngay_ung": "2026-10-20", "han_giao_hang": "2026-11-15", "da_giao_bu": "không"}, {"id": "UT-002", "doi_tac": "Nhà cung cấp Cà Mau (mẫu)", "so_tien_ty": 0.8, "ngay_ung": "2026-11-10", "han_giao_hang": "2026-12-05", "da_giao_bu": "không"}, {"id": "UT-003", "doi_tac": "Nhà cung cấp Sóc Trăng (mẫu)", "so_tien_ty": 0.5, "ngay_ung": "2026-09-25", "han_giao_hang": "2026-10-25", "da_giao_bu": "có"}], "NCC_THI_TRUONG": [{"id": "DK-001", "doi_tac": "Nhà cung cấp Cà Mau (mẫu)", "thi_truong": "Bắc Mỹ", "dat": "có", "han_hieu_luc": "2027-03-01", "ghi_chu": "Có mã số cơ sở, hồ sơ kháng sinh đủ"}, {"id": "DK-002", "doi_tac": "Nhà cung cấp Bạc Liêu (mẫu)", "thi_truong": "Mỹ", "dat": "có", "han_hieu_luc": "2026-12-10", "ghi_chu": "Chứng nhận sắp hết hạn, cần gia hạn"}, {"id": "DK-003", "doi_tac": "Nhà cung cấp Sóc Trăng (mẫu)", "thi_truong": "Đông Nam Á", "dat": "có", "han_hieu_luc": "2027-02-15", "ghi_chu": ""}, {"id": "DK-004", "doi_tac": "Nhà cung cấp Sóc Trăng (mẫu)", "thi_truong": "EU", "dat": "không", "han_hieu_luc": "", "ghi_chu": "Chưa có mã số xuất EU"}, {"id": "DK-005", "doi_tac": "Thương lái Kiên Giang (mẫu)", "thi_truong": "EU", "dat": "không", "han_hieu_luc": "", "ghi_chu": "Chưa có hồ sơ truy xuất"}], "THI_TRUONG": [{"quoc_gia": "Singapore", "nhom": "Đông Nam Á"}, {"quoc_gia": "Malaysia", "nhom": "Đông Nam Á"}, {"quoc_gia": "Thái Lan", "nhom": "Đông Nam Á"}, {"quoc_gia": "Indonesia", "nhom": "Đông Nam Á"}, {"quoc_gia": "Philippines", "nhom": "Đông Nam Á"}, {"quoc_gia": "Campuchia", "nhom": "Đông Nam Á"}, {"quoc_gia": "Lào", "nhom": "Đông Nam Á"}, {"quoc_gia": "Myanmar", "nhom": "Đông Nam Á"}, {"quoc_gia": "Brunei", "nhom": "Đông Nam Á"}, {"quoc_gia": "Timor-Leste", "nhom": "Đông Nam Á"}, {"quoc_gia": "EU", "nhom": "EU"}, {"quoc_gia": "Đức", "nhom": "EU"}, {"quoc_gia": "Hà Lan", "nhom": "EU"}, {"quoc_gia": "Pháp", "nhom": "EU"}, {"quoc_gia": "Ý", "nhom": "EU"}, {"quoc_gia": "Tây Ban Nha", "nhom": "EU"}, {"quoc_gia": "Ba Lan", "nhom": "EU"}, {"quoc_gia": "Bỉ", "nhom": "EU"}, {"quoc_gia": "Mỹ", "nhom": "Bắc Mỹ"}, {"quoc_gia": "Canada", "nhom": "Bắc Mỹ"}, {"quoc_gia": "Mexico", "nhom": "Bắc Mỹ"}, {"quoc_gia": "Trung Quốc", "nhom": "Trung Quốc"}], "YEU_CAU_THI_TRUONG": [{"nhom": "Đông Nam Á", "chung_tu": "Hóa đơn thương mại"}, {"nhom": "Đông Nam Á", "chung_tu": "Packing list"}, {"nhom": "Đông Nam Á", "chung_tu": "Vận đơn"}, {"nhom": "Đông Nam Á", "chung_tu": "C/O mẫu D"}, {"nhom": "Đông Nam Á", "chung_tu": "Chứng thư kiểm dịch"}, {"nhom": "Đông Nam Á", "chung_tu": "Kết quả kiểm nghiệm"}, {"nhom": "EU", "chung_tu": "Hóa đơn thương mại"}, {"nhom": "EU", "chung_tu": "Packing list"}, {"nhom": "EU", "chung_tu": "Vận đơn"}, {"nhom": "EU", "chung_tu": "C/O (EUR.1 hoặc EVFTA)"}, {"nhom": "EU", "chung_tu": "Chứng thư y tế"}, {"nhom": "EU", "chung_tu": "Chứng nhận khai thác (IUU) nếu hải sản khai thác"}, {"nhom": "EU", "chung_tu": "Kết quả kiểm nghiệm dư lượng"}, {"nhom": "EU", "chung_tu": "Mã số cơ sở EU"}, {"nhom": "Bắc Mỹ", "chung_tu": "Hóa đơn thương mại"}, {"nhom": "Bắc Mỹ", "chung_tu": "Packing list"}, {"nhom": "Bắc Mỹ", "chung_tu": "Vận đơn"}, {"nhom": "Bắc Mỹ", "chung_tu": "Thông báo trước FDA"}, {"nhom": "Bắc Mỹ", "chung_tu": "Dữ liệu truy xuất SIMP (nếu thuộc diện)"}, {"nhom": "Bắc Mỹ", "chung_tu": "Chứng thư kiểm dịch"}, {"nhom": "Bắc Mỹ", "chung_tu": "Kết quả kiểm nghiệm"}, {"nhom": "Trung Quốc", "chung_tu": "Hóa đơn thương mại"}, {"nhom": "Trung Quốc", "chung_tu": "Packing list"}, {"nhom": "Trung Quốc", "chung_tu": "Vận đơn"}, {"nhom": "Trung Quốc", "chung_tu": "C/O mẫu E"}, {"nhom": "Trung Quốc", "chung_tu": "Chứng thư kiểm dịch"}, {"nhom": "Trung Quốc", "chung_tu": "Cơ sở đã đăng ký với hải quan Trung Quốc"}, {"nhom": "Trung Quốc", "chung_tu": "Kết quả kiểm nghiệm"}], "CONG_TY": [{"khoa": "ten", "nhan": "Tên công ty", "gia_tri": "Super Seafoods"}, {"khoa": "ten_en", "nhan": "Tên tiếng Anh", "gia_tri": ""}, {"khoa": "loai_hinh", "nhan": "Loại hình", "gia_tri": ""}, {"khoa": "ma_so_thue", "nhan": "Mã số thuế", "gia_tri": ""}, {"khoa": "giay_phep", "nhan": "Giấy phép, ngày cấp", "gia_tri": ""}, {"khoa": "dia_chi", "nhan": "Địa chỉ", "gia_tri": ""}, {"khoa": "dai_dien", "nhan": "Người đại diện", "gia_tri": ""}, {"khoa": "chuc_danh", "nhan": "Chức danh", "gia_tri": ""}, {"khoa": "dien_thoai", "nhan": "Điện thoại", "gia_tri": ""}, {"khoa": "email", "nhan": "Email", "gia_tri": ""}, {"khoa": "nganh_nghe", "nhan": "Ngành nghề chính", "gia_tri": ""}, {"khoa": "ma_co_so", "nhan": "Mã số cơ sở xuất khẩu (EU, Mỹ, Trung Quốc, Singapore…)", "gia_tri": ""}, {"khoa": "chung_nhan", "nhan": "Chứng nhận đang có (HACCP, BRC, ASC…)", "gia_tri": ""}, {"khoa": "ghi_chu", "nhan": "Ghi chú", "gia_tri": ""}], "KHAU": [{"so": 1, "ten": "Nguồn cung", "mo_ta": "Nhận nguyên liệu từ nhà cung cấp theo HĐ mua; kiểm hồ sơ truy xuất, cân và nhận hàng.", "xong_khi": "Nguyên liệu nhập kho, đủ số lượng và hồ sơ truy xuất."}, {"so": 2, "ten": "Chế biến", "mo_ta": "Sơ chế, cấp đông, bao gói và bảo quản; ghi nhận hao hụt thực tế.", "xong_khi": "Ra thành phẩm đúng quy cách, đã ghi hao hụt."}, {"so": 3, "ten": "Chất lượng", "mo_ta": "Lấy mẫu kiểm nghiệm (dư lượng, vi sinh…) và chốt kết quả cho lô.", "xong_khi": "Kết quả kiểm nghiệm là Đạt."}, {"so": 4, "ten": "Hồ sơ XK", "mo_ta": "Lập bộ chứng từ xuất khẩu theo yêu cầu của thị trường đích.", "xong_khi": "Đủ các chứng từ bắt buộc của thị trường."}, {"so": 5, "ten": "Logistics", "mo_ta": "Đặt container, vận chuyển ra cảng, làm thủ tục hải quan, giao hàng lên tàu.", "xong_khi": "Hàng đã lên tàu, có vận đơn."}, {"so": 6, "ten": "Hậu kiểm", "mo_ta": "Theo dõi hàng đến nơi, khiếu nại của khách và thu tiền.", "xong_khi": "Khách nhận hàng, không khiếu nại và đã thanh toán đủ."}], "BUOC_DON": [{"so": 1, "ten": "Nhận đơn", "mo_ta": "Khách gửi đơn hoặc báo giá được chấp nhận; ghi HĐ bán vào hệ thống.", "xong_khi": "Có HĐ bán với khối lượng, giá, hạn giao rõ ràng."}, {"so": 2, "ten": "Tìm nguồn", "mo_ta": "Tìm nhà cung cấp trong nước đủ điều kiện cho thị trường của đơn; đàm phán giá và hạn giao.", "xong_khi": "HĐ mua đã ký phủ đủ khối lượng của đơn."}, {"so": 3, "ten": "Đã ký HĐ mua", "mo_ta": "Các HĐ mua đã ký, chờ nhà cung cấp bắt đầu giao hàng.", "xong_khi": "Lô đầu tiên được mở."}, {"so": 4, "ten": "Sản xuất và lô", "mo_ta": "Nhận nguyên liệu, chế biến, kiểm nghiệm chất lượng theo từng lô.", "xong_khi": "Mọi lô đã qua kiểm nghiệm."}, {"so": 5, "ten": "Hồ sơ và vận chuyển", "mo_ta": "Làm chứng từ, đặt container, thông quan và giao hàng lên tàu.", "xong_khi": "Hàng lên tàu, bộ chứng từ gửi khách."}, {"so": 6, "ten": "Giao và thu tiền", "mo_ta": "Hàng đến nơi, theo dõi khiếu nại và thu tiền từ khách.", "xong_khi": "Giao đủ và thu đủ tiền."}], "LIEN_HE": [{"doi_tac": "Khách Mỹ A (mẫu)", "ngay": "2026-11-19", "noi_dung": "Đặt đều theo quý, ưu tiên tôm PTO"}, {"doi_tac": "Khách Mỹ B (mẫu)", "ngay": "2026-10-17", "noi_dung": "Trả chậm hai kỳ liên tiếp"}, {"doi_tac": "Khách Singapore A (mẫu)", "ngay": "2026-11-15", "noi_dung": "Khắt khe về size và glazing"}, {"doi_tac": "Khách Singapore B (mẫu)", "ngay": "2026-11-09", "noi_dung": "Mới bắt đầu, đơn nhỏ"}, {"doi_tac": "Khách Thái Lan A (mẫu)", "ngay": "2026-09-22", "noi_dung": "Chưa đặt hàng từ tháng 9"}, {"doi_tac": "Khách EU A (mẫu)", "ngay": "2026-11-12", "noi_dung": "Yêu cầu chứng nhận khai thác cho mực"}, {"doi_tac": "Khách EU B (mẫu)", "ngay": "2026-10-25", "noi_dung": "Khiếu nại ba lần về hao hụt"}, {"doi_tac": "Khách Trung Quốc A (mẫu)", "ngay": "2026-11-20", "noi_dung": "Đơn lớn, thanh toán TT 30 ngày"}, {"doi_tac": "Khách Trung Quốc B (mẫu)", "ngay": "2026-10-03", "noi_dung": "Lâu chưa liên hệ"}, {"doi_tac": "Khách Malaysia A (mẫu)", "ngay": "2026-11-04", "noi_dung": "Quan tâm cá tra phi lê"}, {"doi_tac": "Nhà cung cấp Cà Mau (mẫu)", "ngay": "2026-11-21", "noi_dung": "Giao trễ ở đợt gần nhất"}, {"doi_tac": "Nhà cung cấp Bạc Liêu (mẫu)", "ngay": "2026-11-18", "noi_dung": "Chất lượng ổn, giá cao hơn khoảng 2%"}, {"doi_tac": "Nhà cung cấp Sóc Trăng (mẫu)", "ngay": "2026-11-22", "noi_dung": "Cá tra, có một lô bị cảnh báo"}, {"doi_tac": "Thương lái Kiên Giang (mẫu)", "ngay": "2026-11-14", "noi_dung": "Hai lần giao thiếu số lượng, chưa có hồ sơ truy xuất"}, {"doi_tac": "Nhà cung cấp Cà Mau B (mẫu)", "ngay": "2026-11-17", "noi_dung": "Có thể mở rộng khối lượng"}, {"doi_tac": "Nhà cung cấp Bến Tre (mẫu)", "ngay": "2026-10-30", "noi_dung": "Nghêu, hàng theo mùa"}, {"doi_tac": "Nhà cung cấp Trà Vinh (mẫu)", "ngay": "2026-11-10", "noi_dung": "Liên hệ định kỳ"}, {"doi_tac": "Nhà cung cấp Cần Thơ (mẫu)", "ngay": "2026-11-16", "noi_dung": "Cá tra, đạt đều"}, {"doi_tac": "Nhà cung cấp An Giang (mẫu)", "ngay": "2026-11-03", "noi_dung": "Mình trả chậm, nhà cung cấp đã nhắc nhiều lần"}, {"doi_tac": "Nhà cung cấp Đồng Tháp (mẫu)", "ngay": "2026-09-25", "noi_dung": "Lâu chưa làm việc"}, {"doi_tac": "Nhà cung cấp Khánh Hòa (mẫu)", "ngay": "2026-11-06", "noi_dung": "Hải sản khai thác, cần kiểm tra IUU"}, {"doi_tac": "Nhà cung cấp Bình Định (mẫu)", "ngay": "2026-10-22", "noi_dung": "Tàu cá, hồ sơ đủ"}, {"doi_tac": "Nhà cung cấp Ninh Thuận (mẫu)", "ngay": "2026-11-13", "noi_dung": "Giao trễ, tỷ lệ đạt QC thấp"}, {"doi_tac": "Nhà cung cấp Vũng Tàu (mẫu)", "ngay": "2026-10-15", "noi_dung": "Mực, giao nhỏ lẻ"}], "CAI_DAT": [{"khoa": "ngay_sap_het_han", "gia_tri": 14, "mo_ta": "Hợp đồng hết hạn trong bao nhiêu ngày thì cảnh báo Chú ý (trong 7 ngày: Gấp)"}, {"khoa": "ngay_giao_gap", "gia_tri": 7, "mo_ta": "Hạn giao hoặc hạn hợp đồng còn bao nhiêu ngày mà chưa xong thì cảnh báo Gấp (hạn hợp đồng xa hơn thì Chú ý)"}, {"khoa": "ngay_thieu_nguon_gap", "gia_tri": 21, "mo_ta": "HĐ bán thiếu nguồn mua và hạn giao trong bao nhiêu ngày thì Gấp (ngoài ra Chú ý)"}, {"khoa": "tong_chung_tu", "gia_tri": 8, "mo_ta": "Số chứng từ chuẩn của mỗi lô"}, {"khoa": "ngay_khong_lien_he", "gia_tri": 45, "mo_ta": "Quá bao nhiêu ngày chưa làm việc với đối tác thì xếp Theo dõi"}, {"khoa": "no_rui_ro_ngay", "gia_tri": 30, "mo_ta": "Nợ quá hạn trên bao nhiêu ngày thì xếp Rủi ro"}, {"khoa": "dung_han_rui_ro", "gia_tri": 75, "mo_ta": "Tỷ lệ đúng hạn dưới mức này (%) thì Rủi ro"}, {"khoa": "dung_han_theo_doi", "gia_tri": 90, "mo_ta": "Tỷ lệ đúng hạn dưới mức này (%) thì Theo dõi"}, {"khoa": "khieu_nai_rui_ro", "gia_tri": 3, "mo_ta": "Khách có từ bấy nhiêu khiếu nại trong 12 tháng thì Rủi ro"}, {"khoa": "khieu_nai_theo_doi", "gia_tri": 2, "mo_ta": "Khách có từ bấy nhiêu khiếu nại thì Theo dõi"}, {"khoa": "qc_rui_ro", "gia_tri": 85, "mo_ta": "Nhà cung cấp có tỷ lệ lô đạt chất lượng (%) dưới mức này thì Rủi ro"}, {"khoa": "qc_theo_doi", "gia_tri": 92, "mo_ta": "Dưới mức này (%) thì Theo dõi"}, {"khoa": "dung_han_phat_trien", "gia_tri": 95, "mo_ta": "Đúng hạn từ mức này (%) mới được xét Phát triển"}, {"khoa": "gia_tri_phat_trien_khach", "gia_tri": 3, "mo_ta": "Giá trị năm tối thiểu của khách để xét Phát triển (tỷ đồng)"}, {"khoa": "gia_tri_phat_trien_ncc", "gia_tri": 2, "mo_ta": "Giá trị năm tối thiểu của nhà cung cấp để xét Phát triển (tỷ đồng)"}, {"khoa": "tap_trung_canh_bao", "gia_tri": 25, "mo_ta": "Một đối tác chiếm từ bấy nhiêu % giá trị thì cảnh báo tập trung cao"}, {"khoa": "bien_loi_nhuan_thap", "gia_tri": 5, "mo_ta": "Biên lợi nhuận một lô thấp hơn mức này (%) thì cảnh báo Chú ý; âm (bán lỗ) thì Gấp"}, {"khoa": "hao_hut_canh_bao", "gia_tri": 8, "mo_ta": "Hao hụt một lô vượt mức này (%) thì cảnh báo Chú ý"}, {"khoa": "dieu_kien_sap_het", "gia_tri": 30, "mo_ta": "Điều kiện cấp hàng của nhà cung cấp cho một thị trường còn bao nhiêu ngày thì hết hạn thì cảnh báo Chú ý"}, {"khoa": "nguon_don_le_canh_bao", "gia_tri": 70, "mo_ta": "HĐ bán lấy từ một nhà cung cấp quá mức này (% khối lượng) thì cảnh báo nguồn đơn lẻ"}, {"khoa": "nguon_don_le_toi_thieu_tan", "gia_tri": 20, "mo_ta": "Chỉ xét nguồn đơn lẻ với HĐ bán từ bấy nhiêu tấn trở lên"}, {"khoa": "dem_ngay_giao_mua", "gia_tri": 5, "mo_ta": "HĐ mua phải giao sớm hơn HĐ bán ít nhất bấy nhiêu ngày; ít hơn thì cảnh báo Chú ý, sau hạn bán thì Gấp"}, {"khoa": "dem_ngay_tim_nguon", "gia_tri": 10, "mo_ta": "Đơn nhận quá bấy nhiêu ngày mà chưa đủ HĐ mua thì cảnh báo Gấp"}, {"khoa": "ten_don_vi", "gia_tri": "Super Seafoods", "mo_ta": "Tên đơn vị, hiện ở đầu trang"}, {"khoa": "nhan_dau_trang", "gia_tri": "Hệ thống quản lý", "mo_ta": "Dòng chữ nhỏ phía trên tiêu đề"}, {"khoa": "tieu_de", "gia_tri": "Quản lý Super Seafoods", "mo_ta": "Tiêu đề lớn của trang"}, {"khoa": "nguoi_phu_trach", "gia_tri": "Director", "mo_ta": "Tên người phụ trách, hiện ở góc phải đầu trang"}, {"khoa": "chuc_danh", "gia_tri": "Văn phòng tại Việt Nam", "mo_ta": "Dòng chức danh dưới tên người phụ trách"}, {"khoa": "logo_url", "gia_tri": "", "mo_ta": "Link ảnh logo (bắt đầu bằng https://). Để trống thì hiện chữ cái đầu của tên đơn vị"}, {"khoa": "chan_trang", "gia_tri": "", "mo_ta": "Dòng chữ ở chân trang (để trống thì ẩn)"}]};
+var DB=null, CFG={}, TXT={}, TODAY=null, DEMO=false;
+var CT=[], LOTS=[], ADV=[], ELIG=[], MK=[], REQ=[], OF={g:"all"}, ALLOC=[], DT=[], AR=[0,0,0,0], AP=[0,0,0,0];
+var STAGES=["Nguồn cung","Chế biến","Chất lượng","Hồ sơ XK","Logistics","Hậu kiểm"];
+var BUCKETS=["Chưa đến hạn","Quá 1–30 ngày","Quá 31–60 ngày","Quá trên 60 ngày"];
+var REQUIRED=["NHANH","DOI_TAC","HOP_DONG","LO_HANG","HD_LIEN_KET","CONG_NO","LIEN_HE","CAI_DAT"];
+var DEF={ngay_sap_het_han:14,ngay_giao_gap:7,ngay_thieu_nguon_gap:21,tong_chung_tu:8,ngay_khong_lien_he:45,no_rui_ro_ngay:30,
+  dung_han_rui_ro:75,dung_han_theo_doi:90,khieu_nai_rui_ro:3,khieu_nai_theo_doi:2,qc_rui_ro:85,qc_theo_doi:92,
+  dung_han_phat_trien:95,gia_tri_phat_trien_khach:3,gia_tri_phat_trien_ncc:2,tap_trung_canh_bao:25,bien_loi_nhuan_thap:5,hao_hut_canh_bao:8,dieu_kien_sap_het:30,dem_ngay_giao_mua:5,dem_ngay_tim_nguon:10,nguon_don_le_canh_bao:70,nguon_don_le_toi_thieu_tan:20};
+var nf=new Intl.NumberFormat("vi-VN",{maximumFractionDigits:2});
+
+function C(k){return CFG[k]!=null?CFG[k]:DEF[k]}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function has(v){return v!==""&&v!=null}
+function num(v){var n=Number(String(v==null?"":v).replace(",","."));return isFinite(n)?n:0}
+function low(v){return String(v==null?"":v).trim().toLowerCase()}
+function sum(a){return a.reduce(function(x,y){return x+y},0)}
+function dparse(s){var p=String(s).slice(0,10).split("-");return new Date(+p[0],+p[1]-1,+p[2])}
+function dd(s){return Math.round((dparse(s)-TODAY)/86400000)}
+function dmy(s){var p=String(s).slice(0,10).split("-");return p[2]+"/"+p[1]+"/"+p[0]}
+function $(id){return document.getElementById(id)}
+
+/* ===== Dựng mô hình từ các tab ===== */
+function buildModel(){
+  CFG={}; TXT={};
+  (DB.CAI_DAT||[]).forEach(function(r){
+    if(!has(r.khoa)) return;
+    TXT[r.khoa]=has(r.gia_tri)?String(r.gia_tri):"";
+    if(has(r.gia_tri)&&isFinite(Number(String(r.gia_tri).replace(",",".")))) CFG[r.khoa]=num(r.gia_tri);
+  });
+  CT=(DB.HOP_DONG||[]).map(function(r){return {id:r.id,type:low(r.loai),party:r.doi_tac,prod:r.san_pham,
+    qty:has(r.khoi_luong_tan)?num(r.khoi_luong_tan):null,price:has(r.don_gia)?num(r.don_gia):null,cur:r.tien_te||"",
+    due:has(r.han_giao)?r.han_giao:null,exp:r.het_han,prog:has(r.tien_do_pct)?num(r.tien_do_pct):null,mkt:r.thi_truong||"",signed:has(r.ngay_ky)?r.ngay_ky:null}});
+  LOTS=(DB.LO_HANG||[]).map(function(r){return {id:r.id,prod:r.san_pham,mkt:r.thi_truong,buy:r.hd_mua,sell:r.hd_ban,qty:num(r.khoi_luong_tan),
+    stage:num(r.khau)||1,docs:num(r.so_chung_tu_du),total:has(r.tong_chung_tu)?num(r.tong_chung_tu):0,qc:r.ket_qua_qc||"Chưa có",cost:has(r.gia_von_usd_kg)?num(r.gia_von_usd_kg):null,sp:has(r.gia_ban_usd_kg)?num(r.gia_ban_usd_kg):null,loss:has(r.hao_hut_pct)?num(r.hao_hut_pct):null}});
+  LOTS.forEach(function(l){l.mg=(l.cost!=null&&l.sp!=null&&l.sp>0)?(l.sp-l.cost)/l.sp*100:null});
+  if((DB.KHAU||[]).length===6) STAGES=DB.KHAU.map(function(r){return String(r.ten)});
+  if((DB.BUOC_DON||[]).length===6) STG=DB.BUOC_DON.map(function(r){return String(r.ten)});
+  MK=(DB.THI_TRUONG||[]).map(function(r){return {c:String(r.quoc_gia||"").trim(),g:String(r.nhom||"").trim()}});
+  REQ=(DB.YEU_CAU_THI_TRUONG||[]).map(function(r){return {g:String(r.nhom||"").trim(),d:String(r.chung_tu||"").trim()}});
+  LOTS.forEach(function(l){ if(!l.total){ var n=reqOf(grpOf(l.mkt)).length; l.total=n||C("tong_chung_tu"); } });
+  ELIG=(DB.NCC_THI_TRUONG||[]).map(function(r){return {party:r.doi_tac,mkt:r.thi_truong,ok:String(r.dat||"").toLowerCase()==="có",exp:has(r.han_hieu_luc)?r.han_hieu_luc:null}});
+  ADV=(DB.UNG_TRUOC||[]).map(function(r){return {id:r.id,party:r.doi_tac,amt:num(r.so_tien_ty),due:r.han_giao_hang,done:String(r.da_giao_bu||"").toLowerCase()==="có"}}).filter(function(x){return !x.done});
+  ALLOC=(DB.HD_LIEN_KET||[]).map(function(r){return {sell:r.hd_ban,buy:r.hd_mua,qty:num(r.khoi_luong_tan)}});
+  AR=[0,0,0,0]; AP=[0,0,0,0]; var odBy={};
+  (DB.CONG_NO||[]).forEach(function(r){
+    if(low(r.da_thanh_toan)==="có") return;
+    var amt=num(r.so_tien_ty), late=-dd(r.han_thanh_toan), T=low(r.loai)==="phải thu"?AR:AP;
+    T[late<=0?0:late<=30?1:late<=60?2:3]+=amt;
+    if(late>0){var o=odBy[r.doi_tac]||(odBy[r.doi_tac]={od:0,d:0}); o.od+=amt; if(late>o.d)o.d=late;}
+  });
+  var lastBy={}; (DB.LIEN_HE||[]).forEach(function(r){var d=dparse(r.ngay); if(!lastBy[r.doi_tac]||d>lastBy[r.doi_tac])lastBy[r.doi_tac]=d});
+  DT=(DB.DOI_TAC||[]).map(function(r){
+    var o=odBy[r.ten]||{od:0,d:0}, lt=lastBy[r.ten];
+    return {t:low(r.loai)==="khách mua"?"K":"N",n:r.ten,loc:r.khu_vuc||"",
+      hd:CT.filter(function(c){return c.party===r.ten&&dd(c.exp)>=0}).length,y:num(r.gia_tri_nam_ty),od:o.od,d:o.d,
+      on:num(r.ty_le_dung_han),q:num(r.chi_so_chat_luong),last:lt?Math.round((TODAY-lt)/86400000):999,note:r.ghi_chu||"",grp:r.nhom||""};
+  });
+}
+function grpOf(m){
+  if(!has(m)) return "Khác"; var s=String(m).trim().toLowerCase();
+  var r=MK.filter(function(x){return x.c.toLowerCase()===s})[0]; if(r) return r.g;
+  var g=MK.filter(function(x){return x.g.toLowerCase()===s})[0]; return g?g.g:"Khác";
+}
+function reqOf(g){return REQ.filter(function(x){return x.g===g}).map(function(x){return x.d})}
+var STG=["Nhận đơn","Tìm nguồn","Đã ký HĐ mua","Sản xuất và lô","Hồ sơ và vận chuyển","Giao và thu tiền"];
+function orderStage(c){
+  if(c.prog!=null&&c.prog>=100) return 6;
+  var cov=covered(c.id); if(cov<=0) return 1; if(cov<c.qty) return 2;
+  var L=LOTS.filter(function(l){return l.sell===c.id});
+  if(L.length){ var m=Math.min.apply(null,L.map(function(l){return l.stage})); return m>=6?6:m>=4?5:4; }
+  return 3;
+}
+function ctById(id){return CT.filter(function(c){return c.id===id})[0]}
+function eligOf(party,mkt){
+  var gr=grpOf(mkt), r=ELIG.filter(function(e){return e.party===party&&(e.mkt===mkt||e.mkt===gr)})[0];
+  if(!r) return {st:"unknown"};
+  if(!r.ok) return {st:"no"};
+  var d=r.exp?dd(r.exp):null;
+  if(d!==null&&d<0) return {st:"expired",d:d};
+  if(d!==null&&d<=C("dieu_kien_sap_het")) return {st:"soon",d:d};
+  return {st:"ok"};
+}
+function srcOf(id){return ALLOC.filter(function(a){return a.sell===id})}
+function useOf(id){return ALLOC.filter(function(a){return a.buy===id})}
+function covered(id){return sum(srcOf(id).map(function(a){return a.qty}))}
+function ctValue(c){return c.qty==null||c.price==null?null:c.qty*1000*c.price}
+function money(c){var v=ctValue(c); if(v==null)return "—"; return c.cur==="USD"?"$"+nf.format(v):nf.format(v/1e9)+" tỷ ₫"}
+function lastTxt(p){return p.last>=999?"chưa có":p.last+" ngày"}
+
+function rate(p){
+  var isK=p.t==="K", r=[], lvl=0;
+  function up(v){if(v>lvl)lvl=v}
+  if(p.od>0){r.push((isK?"Khách nợ quá hạn ":"Mình trả chậm ")+p.d+" ngày ("+nf.format(p.od)+" tỷ)"); up(p.d>C("no_rui_ro_ngay")?2:1)}
+  if(p.on<C("dung_han_theo_doi")){r.push((isK?"Thanh toán đúng hạn chỉ ":"Giao đúng hạn chỉ ")+p.on+"%"); up(p.on<C("dung_han_rui_ro")?2:1)}
+  if(isK){ if(p.q>=C("khieu_nai_theo_doi")){r.push(p.q+" khiếu nại trong 12 tháng"); up(p.q>=C("khieu_nai_rui_ro")?2:1)} }
+  else if(p.q<C("qc_theo_doi")){r.push("Chỉ "+p.q+"% lô đạt chất lượng"); up(p.q<C("qc_rui_ro")?2:1)}
+  if(p.last>C("ngay_khong_lien_he")){r.push(p.last>=999?"Chưa có lịch sử làm việc":"Chưa làm việc "+p.last+" ngày"); up(1)}
+  var name=lvl===2?"Rủi ro":lvl===1?"Theo dõi":(p.y>=(isK?C("gia_tri_phat_trien_khach"):C("gia_tri_phat_trien_ncc"))&&p.on>=C("dung_han_phat_trien"))?"Phát triển":"Ổn định";
+  if(name==="Phát triển") r.push("Giá trị năm "+nf.format(p.y)+" tỷ, đúng hạn "+p.on+"%");
+  if(!r.length) r.push("Không có điểm cần lưu ý");
+  return {rank:name,lvl:lvl,why:r};
+}
+
+function buildAlerts(){
+  var A=[], gap7=C("ngay_giao_gap");
+  CT.forEach(function(c){
+    var le=dd(c.exp);
+    if(c.type==="bán"&&c.qty!=null){
+      var cov=covered(c.id), gap=c.qty-cov;
+      if(gap>0){ var age=c.signed?-dd(c.signed):null; A.push({sev:(c.due&&dd(c.due)<=C("ngay_thieu_nguon_gap"))||(age!==null&&age>C("dem_ngay_tim_nguon"))?2:1,id:c.id,t:"Mới có nguồn mua cho <b>"+nf.format(cov)+"/"+nf.format(c.qty)+" tấn</b>, thiếu <b>"+nf.format(gap)+"</b> tấn"+(age!==null?" · nhận đơn <b>"+age+"</b> ngày trước":""),a:"Ký thêm HĐ mua hoặc thương lượng giảm khối lượng với khách.",tab:"HD_LIEN_KET"}); }
+    }
+    if(le>=0&&le<=C("ngay_sap_het_han")){
+      if(c.prog===null) A.push({sev:1,id:c.id,t:"Hợp đồng dịch vụ hết hạn sau <b>"+le+"</b> ngày",a:"Gia hạn hoặc ký hợp đồng mới trước hạn.",tab:"HOP_DONG"});
+      else if(c.prog<100) A.push({sev:le<=gap7?2:1,id:c.id,t:"Hết hạn sau <b>"+le+"</b> ngày, mới thực hiện <b>"+c.prog+"%</b>",a:"Chốt giao đủ hoặc ký phụ lục gia hạn.",tab:"HOP_DONG"});
+    }
+    if(c.due&&c.prog!==null&&c.prog<100){
+      var dg=dd(c.due);
+      if(dg>=0&&dg<=gap7) A.push({sev:2,id:c.id,t:"Hạn giao sau <b>"+dg+"</b> ngày, mới giao <b>"+c.prog+"%</b>",a:c.type==="mua"?"Đốc nhà cung cấp giao đủ, tính phương án thay nguồn.":"Xác nhận lịch giao với khách, báo sớm nếu sẽ trễ.",tab:"HOP_DONG"});
+      if(dg<0) A.push({sev:2,id:c.id,t:"Đã quá hạn giao <b>"+(-dg)+"</b> ngày, mới giao <b>"+c.prog+"%</b>",a:"Làm việc ngay với đối tác, lập biên bản và tính phạt theo hợp đồng.",tab:"HOP_DONG"});
+    }
+  });
+  LOTS.forEach(function(l){
+    var miss=l.total-l.docs;
+    if(l.qc==="Cảnh báo") A.push({sev:2,id:l.id,t:"Lô bị <b>cảnh báo chất lượng</b>",a:"Khoanh lô, lấy mẫu kiểm lại, báo khách và nhà cung cấp.",tab:"SU_CO"});
+    if(l.stage>=5&&miss>0) A.push({sev:2,id:l.id,t:"Đã sang "+STAGES[l.stage-1]+" nhưng thiếu <b>"+miss+"</b> chứng từ",a:"Bổ sung trước khi hàng rời kho.",tab:"CHUNG_TU"});
+    else if(l.stage===4&&miss>0) A.push({sev:1,id:l.id,t:"Đang làm hồ sơ xuất khẩu, thiếu <b>"+miss+"</b> chứng từ",a:"Lập danh sách chứng từ còn thiếu và hạn nộp.",tab:"CHUNG_TU"});
+    if(l.mg!=null&&l.mg<0) A.push({sev:2,id:l.id,t:"Bán <b>lỗ "+nf.format(-l.mg)+"%</b> (giá bán thấp hơn giá vốn)",a:"Rà lại giá vốn, hao hụt hoặc đàm phán lại giá với khách.",tab:"LO_HANG"});
+    else if(l.mg!=null&&l.mg<C("bien_loi_nhuan_thap")) A.push({sev:1,id:l.id,t:"Biên lợi nhuận chỉ <b>"+nf.format(l.mg)+"%</b>",a:"Xem lại giá vốn và hao hụt của lô.",tab:"LO_HANG"});
+    if(l.loss!=null&&l.loss>C("hao_hut_canh_bao")) A.push({sev:1,id:l.id,t:"Hao hụt <b>"+nf.format(l.loss)+"%</b>, vượt mức "+C("hao_hut_canh_bao")+"%",a:"Kiểm tra khâu chế biến, bảo quản và cân nhận hàng từ nhà cung cấp.",tab:"LO_HANG"});
+    if(l.qc==="Chờ KQ"&&l.stage>=4) A.push({sev:1,id:l.id,t:"Chưa có kết quả kiểm nghiệm mà đã sang <b>"+STAGES[l.stage-1]+"</b>",a:"Đòi kết quả trước khi chốt chứng nhận.",tab:"KIEM_NGHIEM"});
+  });
+  ALLOC.forEach(function(al){
+    var sc=ctById(al.sell), bc=ctById(al.buy); if(!sc||!bc||!sc.mkt) return;
+    if(sc.due&&bc.due&&!(bc.prog!=null&&bc.prog>=100)){
+      var gp=Math.round((dparse(sc.due)-dparse(bc.due))/86400000);
+      if(gp<0) A.push({sev:2,id:al.sell,t:"Hạn giao HĐ mua <b>"+esc(al.buy)+"</b> sau hạn giao HĐ bán <b>"+(-gp)+"</b> ngày",a:"Thương lượng nhà cung cấp giao sớm hơn hoặc báo khách dời hạn.",tab:"HOP_DONG"});
+      else if(gp<C("dem_ngay_giao_mua")) A.push({sev:1,id:al.sell,t:"HĐ mua <b>"+esc(al.buy)+"</b> chỉ đệm <b>"+gp+"</b> ngày trước hạn giao HĐ bán (cần ít nhất "+C("dem_ngay_giao_mua")+")",a:"Chốt lịch giao sớm với nhà cung cấp để còn kiểm, đóng gói và làm hồ sơ.",tab:"HOP_DONG"});
+    }
+    var e=eligOf(bc.party,sc.mkt), nm=esc(String(bc.party).replace(" (mẫu)","")), tt=" chưa đủ điều kiện cấp hàng cho thị trường <b>"+esc(sc.mkt)+"</b>";
+    if(e.st==="no"||e.st==="expired") A.push({sev:2,id:al.sell,t:"Nguồn "+nm+(e.st==="expired"?" hết hạn điều kiện thị trường <b>"+esc(sc.mkt)+"</b> "+(-e.d)+" ngày":tt),a:"Đổi nguồn hoặc hoàn thiện hồ sơ trước khi giao lô cho khách.",tab:"NCC_THI_TRUONG"});
+    else if(e.st==="unknown") A.push({sev:1,id:al.sell,t:"Nguồn "+nm+" chưa có thông tin điều kiện cho thị trường <b>"+esc(sc.mkt)+"</b>",a:"Khai báo ở tab NCC_THI_TRUONG sau khi kiểm tra hồ sơ của nhà cung cấp.",tab:"NCC_THI_TRUONG"});
+    else if(e.st==="soon") A.push({sev:1,id:al.sell,t:"Điều kiện của nguồn "+nm+" cho <b>"+esc(sc.mkt)+"</b> hết hạn sau <b>"+e.d+"</b> ngày",a:"Gia hạn chứng nhận hoặc mã số trước khi giao.",tab:"NCC_THI_TRUONG"});
+  });
+  CT.forEach(function(c){
+    if(c.type!=="bán"||c.qty==null||c.qty<C("nguon_don_le_toi_thieu_tan")) return;
+    var by={}; srcOf(c.id).forEach(function(al){var b=ctById(al.buy); if(b) by[b.party]=(by[b.party]||0)+al.qty});
+    var tot=sum(Object.keys(by).map(function(k){return by[k]})); if(!tot) return;
+    var top=Object.keys(by).sort(function(x,y){return by[y]-by[x]})[0], sh=by[top]/tot*100;
+    if(sh>C("nguon_don_le_canh_bao")) A.push({sev:1,id:c.id,t:"<b>"+nf.format(sh)+"%</b> khối lượng lấy từ một nguồn ("+esc(String(top).replace(" (mẫu)",""))+")",a:"Chuẩn bị nguồn dự phòng; nếu nguồn này giao trễ cả đơn bị ảnh hưởng.",tab:"HD_LIEN_KET"});
+  });
+  ADV.forEach(function(u){
+    var dl=u.due?dd(u.due):null;
+    if(dl!==null&&dl<0) A.push({sev:2,id:u.id,t:"Ứng <b>"+nf.format(u.amt)+" tỷ</b> cho "+esc(String(u.party).replace(" (mẫu)",""))+", quá hạn giao <b>"+(-dl)+"</b> ngày chưa bù hàng",a:"Đòi giao hàng bù hoặc hoàn tiền ứng; xem lại hạn mức ứng cho đối tác này.",tab:"UNG_TRUOC"});
+    else if(dl!==null&&dl<=C("ngay_giao_gap")) A.push({sev:1,id:u.id,t:"Tiền ứng <b>"+nf.format(u.amt)+" tỷ</b> cho "+esc(String(u.party).replace(" (mẫu)",""))+" đến hạn giao sau <b>"+dl+"</b> ngày",a:"Xác nhận lịch giao với đối tác.",tab:"UNG_TRUOC"});
+  });
+  DT.forEach(function(p){
+    var r=rate(p);
+    if(r.lvl===2) A.push({sev:(p.od>0&&p.d>C("no_rui_ro_ngay"))?2:1,id:String(p.n).replace(" (mẫu)",""),t:"Xếp hạng <b>Rủi ro</b>: "+esc(r.why[0]),a:"Làm việc trực tiếp trong tuần và xem lại điều kiện hợp tác.",tab:"DOI_TAC"});
+  });
+  A.sort(function(x,y){return y.sev-x.sev||(String(x.id)<String(y.id)?-1:1)});
+  return A;
+}
+
+function bars(el,labels,vals,max,color,fmt){
+  var h="";
+  labels.forEach(function(lb,i){
+    var w=max?Math.round(vals[i]/max*100):0;
+    h+='<div class="brow" style="--c:'+color+'"><span class="lab">'+esc(lb)+'</span><div class="trk"><div class="fil" style="width:'+w+'%"></div></div><span class="num">'+fmt(vals[i])+'</span></div>';
+  });
+  el.insertAdjacentHTML("beforeend",h);
+}
+
+/* ===== Sơ đồ + bảng cấu trúc ===== */
+function renderMap(){
+  var rows=DB.NHANH||[], br=rows.filter(function(r){return !String(r.nhanh_cha||"").trim()});
+  var grid=$("grid"); grid.innerHTML=""; $("rows").innerHTML="";
+  var nLeaf=0, tabs={};
+  br.forEach(function(b,i){
+    var lv=rows.filter(function(r){return String(r.nhanh_cha)===String(b.id)});
+    var c="var(--accent)", focus=b.trang_thai==="Trọng tâm";
+    var h='<article class="card'+(focus?" focus":"")+'" style="--c:'+c+'"><h2><span class="n">'+(i+1)+'</span><span>'+esc(b.ten)+'</span>'+(b.uu_tien?'<span class="tag">'+esc(b.uu_tien)+'</span>':"")+'</h2><p class="d">'+esc(b.mo_ta||"")+'</p><ul class="leaves">';
+    $("rows").insertAdjacentHTML("beforeend",'<tr class="br" style="--c:'+c+'"><td class="id">'+esc(b.id)+'</td><td>gốc</td><td><span class="dot"></span>'+esc(b.ten)+'</td><td>'+esc(b.mo_ta||"")+'</td><td></td><td>'+esc(b.uu_tien||"")+'</td><td>'+esc(b.trang_thai||"")+'</td></tr>');
+    lv.forEach(function(l,j){
+      nLeaf++; if(l.tab_du_lieu)tabs[l.tab_du_lieu]=1;
+      h+='<li><details'+(focus&&j<4?" open":"")+'><summary>'+esc(l.ten)+'</summary><div class="leafbody"><p>'+esc(l.mo_ta||"")+'</p>'+(l.tab_du_lieu?'<span class="chip">'+esc(l.tab_du_lieu)+'</span>':"")+'</div></details></li>';
+      $("rows").insertAdjacentHTML("beforeend",'<tr style="--c:'+c+'"><td class="id">'+esc(l.id)+'</td><td class="id">'+esc(b.id)+'</td><td>'+esc(l.ten)+'</td><td>'+esc(l.mo_ta||"")+'</td><td>'+(l.tab_du_lieu?'<span class="chip">'+esc(l.tab_du_lieu)+'</span>':"")+'</td><td>'+esc(b.uu_tien||"")+'</td><td>'+esc(l.trang_thai||"")+'</td></tr>');
+    });
+    h+='</ul></article>'; grid.insertAdjacentHTML("beforeend",h);
+  });
+  $("stat").innerHTML='<span><b>'+br.length+'</b> nhánh</span><span>·</span><span><b>'+nLeaf+'</b> mục</span>';
+}
+
+/* ===== Dashboard ===== */
+function ordIds(c){return [c.id].concat(srcOf(c.id).map(function(x){return x.buy})).concat(LOTS.filter(function(l){return l.sell===c.id}).map(function(l){return l.id}))}
+function orders(){return CT.filter(function(c){return c.type==="bán"&&c.qty!=null})}
+function renderBoard(A){
+  var gs=[]; MK.forEach(function(m){if(gs.indexOf(m.g)<0)gs.push(m.g)}); if(orders().some(function(c){return grpOf(c.mkt)==="Khác"})) gs.push("Khác");
+  if(gs.indexOf(OF.g)<0&&OF.g!=="all") OF.g="all";
+  $("ogrp").innerHTML='<button type="button" data-g="all" aria-pressed="'+(OF.g==="all")+'">Tất cả</button>'+gs.map(function(g){return '<button type="button" data-g="'+esc(g)+'" aria-pressed="'+(OF.g===g)+'">'+esc(g)+'</button>'}).join("");
+  var cols=[[],[],[],[],[],[]];
+  orders().filter(function(c){return OF.g==="all"||grpOf(c.mkt)===OF.g}).sort(function(x,y){return (x.due?dd(x.due):9999)-(y.due?dd(y.due):9999)}).forEach(function(c){cols[orderStage(c)-1].push(c)});
+  var h='<div class="board">';
+  cols.forEach(function(arr,i){
+    h+='<section class="bcol'+(arr.length?"":" emp")+'"><h4><span>'+(i+1)+'. '+STG[i]+'</span><b>'+arr.length+'</b></h4>';
+    arr.forEach(function(c){
+      var ids=ordIds(c), n2=A.filter(function(x){return ids.indexOf(x.id)>=0&&x.sev===2}).length, n1=A.filter(function(x){return ids.indexOf(x.id)>=0&&x.sev===1}).length;
+      var dg=c.due?dd(c.due):null, cv=covered(c.id), cp=c.qty?Math.min(100,Math.round(cv/c.qty*100)):0;
+      h+='<button type="button" class="ocard" data-o="'+esc(c.id)+'"><div class="oc-h"><b>'+esc(c.id)+'</b><span class="gtag">'+esc(grpOf(c.mkt))+'</span></div><div class="oc-p">'+esc(String(c.party).replace(" (mẫu)",""))+'</div><div class="oc-s">'+esc(c.prod)+' · '+nf.format(c.qty)+' t</div>'
+        +(dg!==null?'<div class="oc-d"><span class="pill '+(dg<0||dg<=C("ngay_giao_gap")?"crit":dg<=C("ngay_sap_het_han")*2?"warn":"ok")+'">'+(dg<0?"quá hạn "+(-dg)+" ngày":"giao sau "+dg+" ngày")+'</span></div>':"")
+        +'<div class="oc-b" title="Nguồn mua phủ '+cp+'%"><div class="trk"><div class="fil" style="width:'+cp+'%"></div></div><span>nguồn '+cp+'%</span></div>'
+        +((n2||n1)?'<div class="oc-f">'+(n2?'<span class="pill crit">'+n2+' gấp</span>':"")+(n1?'<span class="pill warn">'+n1+' chú ý</span>':"")+'</div>':"")+'</button>';
+    });
+    if(!arr.length) h+='<p class="empty">Không có đơn</p>';
+    h+='</section>';
+  });
+  $("board").innerHTML=h+'</div>';
+}
+function orderMargin(id){
+  var L=LOTS.filter(function(l){return l.sell===id&&l.mg!=null&&l.qty>0}), q=sum(L.map(function(l){return l.qty}));
+  return q?sum(L.map(function(l){return l.mg*l.qty}))/q:null;
+}
+function renderFin(A){
+  var arOver=AR[1]+AR[2]+AR[3], apOver=AP[1]+AP[2]+AP[3], adv=sum(ADV.map(function(u){return u.amt}));
+  var od=orders().map(function(c){return {c:c,m:orderMargin(c.id)}}).filter(function(x){return x.m!==null});
+  var avg=od.length?sum(od.map(function(x){return x.m}))/od.length:null;
+  var T=[{l:"Phải thu quá hạn",v:nf.format(arOver)+" tỷ",s:"khách nợ quá hạn",c:arOver?"var(--warn)":"var(--ok)"},
+    {l:"Phải trả quá hạn",v:nf.format(apOver)+" tỷ",s:"mình nợ nhà cung cấp",c:apOver?"var(--warn)":"var(--ok)"},
+    {l:"Tiền đang ứng trước",v:nf.format(adv)+" tỷ",s:ADV.length+" khoản chưa bù hàng",c:ADV.some(function(u){return u.due&&dd(u.due)<0})?"var(--crit)":"var(--accent)"},
+    {l:"Biên lợi nhuận trung bình",v:avg==null?"—":nf.format(avg)+"%",s:od.length+" đơn đã có giá",c:avg!=null&&avg<C("bien_loi_nhuan_thap")?"var(--warn)":"var(--ok)"}];
+  var th=""; T.forEach(function(t){th+='<div class="tile" style="--s:'+t.c+'"><div class="l">'+esc(t.l)+'</div><div class="v">'+esc(String(t.v))+'</div><div class="s">'+esc(t.s)+'</div></div>'});
+  $("ftiles").innerHTML=th;
+  var ah='<thead><tr><th>Nhà cung cấp</th><th>Số tiền</th><th>Hạn giao hàng bù</th></tr></thead><tbody>';
+  ADV.slice().sort(function(x,y){return (x.due?dd(x.due):9999)-(y.due?dd(y.due):9999)}).forEach(function(u){var d=u.due?dd(u.due):null;
+    ah+='<tr><td>'+esc(String(u.party).replace(" (mẫu)",""))+'</td><td class="num">'+nf.format(u.amt)+' tỷ</td><td class="num">'+(u.due?dmy(u.due):"—")+(d!==null?' <span class="pill '+(d<0?"crit":d<=C("ngay_giao_gap")?"warn":"ok")+'">'+(d<0?"quá "+(-d)+" ngày":"còn "+d+" ngày")+'</span>':"")+'</td></tr>'});
+  if(!ADV.length) ah+='<tr><td colspan="3" style="color:var(--muted)">Không có khoản ứng nào chưa bù hàng.</td></tr>';
+  $("advtab").innerHTML=ah+"</tbody>";
+  var mh='<thead><tr><th>Đơn</th><th>Khách</th><th>Nhóm thị trường</th><th>Biên lợi nhuận</th></tr></thead><tbody>';
+  od.sort(function(x,y){return x.m-y.m}).forEach(function(x){mh+='<tr><td class="id">'+esc(x.c.id)+'</td><td>'+esc(String(x.c.party).replace(" (mẫu)",""))+'</td><td>'+esc(grpOf(x.c.mkt))+'</td><td class="num"><span class="pill '+(x.m<0?"crit":x.m<C("bien_loi_nhuan_thap")?"warn":"ok")+'">'+nf.format(x.m)+'%</span></td></tr>'});
+  if(!od.length) mh+='<tr><td colspan="4" style="color:var(--muted)">Chưa có lô nào có giá vốn và giá bán.</td></tr>';
+  $("mgtab").innerHTML=mh+"</tbody>";
+}
+function openOrder(id){
+  var c=ctById(id); if(!c) return;
+  var g=grpOf(c.mkt), A=buildAlerts(), ids=ordIds(c), srcs=srcOf(id), lots=LOTS.filter(function(l){return l.sell===id}), mg=orderMargin(id);
+  var pt=DT.filter(function(p){return p.n===c.party})[0];
+  var gr=[["Khách",String(c.party).replace(" (mẫu)","")],["Sản phẩm",c.prod||"—"],["Khối lượng",nf.format(c.qty)+" tấn"],["Giá trị",money(c)],["Thị trường",(c.mkt&&c.mkt!==g)?c.mkt+" · "+g:g],
+    ["Hạn giao",c.due?dmy(c.due):"—"],["Hết hạn HĐ",dmy(c.exp)],["Tiến độ giao",c.prog==null?"—":c.prog+"%"],["Biên lợi nhuận",mg==null?"Chưa có giá":nf.format(mg)+"%"],
+    ["Khách nợ quá hạn",pt&&pt.od?nf.format(pt.od)+" tỷ · "+pt.d+" ngày":"Không"]];
+  var h='<div class="dh"><h3>'+esc(id)+' · '+esc(STG[orderStage(c)-1])+'</h3></div><div class="dgrid">'+gr.map(function(x){return '<div><div class="k">'+esc(x[0])+'</div><div class="vv">'+esc(String(x[1]))+'</div></div>'}).join("")+'</div>';
+  h+='<h4 class="msec">Nguồn mua (HĐ mua đứng sau đơn này)</h4>';
+  if(srcs.length){
+    h+='<div class="tablewrap"><table style="min-width:640px"><thead><tr><th>HĐ mua</th><th>Nhà cung cấp</th><th>Tấn</th><th>Giá</th><th>Đệm giao</th><th>Điều kiện '+esc(g)+'</th></tr></thead><tbody>';
+    var tot=sum(srcs.map(function(x){return x.qty}));
+    srcs.forEach(function(al){var b=ctById(al.buy)||{}, e=eligOf(b.party,c.mkt), gp=(c.due&&b.due)?Math.round((dparse(c.due)-dparse(b.due))/86400000):null;
+      var el={ok:["ok","Đủ"],no:["crit","Chưa đủ"],expired:["crit","Hết hạn"],soon:["warn","Sắp hết hạn"],unknown:["warn","Chưa khai báo"]}[e.st];
+      h+='<tr><td class="id">'+esc(al.buy)+'</td><td>'+esc(String(b.party||"—").replace(" (mẫu)",""))+'</td><td class="num">'+nf.format(al.qty)+' ('+(tot?Math.round(al.qty/tot*100):0)+'%)</td><td class="num">'+(b.price!=null?nf.format(b.price)+" "+esc(b.cur||"")+"/kg":"—")+'</td><td class="num">'+(gp===null?"—":'<span class="pill '+(gp<0?"crit":gp<C("dem_ngay_giao_mua")?"warn":"ok")+'">'+gp+' ngày</span>')+'</td><td><span class="pill '+el[0]+'">'+el[1]+'</span></td></tr>';});
+    h+='</tbody></table></div>';
+  } else h+='<p class="sub">Chưa có HĐ mua nào gắn với đơn này. Thêm ở tab HD_LIEN_KET của Sheet.</p>';
+  h+='<h4 class="msec">Lô hàng</h4>';
+  if(lots.length){
+    h+='<div class="tablewrap"><table style="min-width:560px"><thead><tr><th>Lô</th><th>Khâu</th><th>Chứng từ</th><th>Chất lượng</th><th>Biên</th><th>Hao hụt</th></tr></thead><tbody>';
+    lots.forEach(function(l){var miss=l.total-l.docs, qcc=l.qc==="Đạt"?"ok":l.qc==="Cảnh báo"?"crit":"warn";
+      h+='<tr><td class="id">'+esc(l.id)+'</td><td>'+l.stage+'/6 · '+esc(STAGES[l.stage-1]||"")+'</td><td class="num"><span class="pill '+(miss<=0?"ok":l.stage>=5?"crit":"warn")+'">'+l.docs+'/'+l.total+'</span></td><td><span class="pill '+qcc+'">'+esc(l.qc)+'</span></td><td class="num">'+(l.mg==null?"—":nf.format(l.mg)+"%")+'</td><td class="num">'+(l.loss==null?"—":nf.format(l.loss)+"%")+'</td></tr>';});
+    h+='</tbody></table></div>';
+  } else h+='<p class="sub">Chưa có lô nào.</p>';
+  var rq=reqOf(g);
+  h+='<h4 class="msec">Chứng từ bắt buộc của thị trường '+esc(g)+'</h4>'+(rq.length?'<div class="chips">'+rq.map(function(x){return '<span class="chip2">'+esc(x)+'</span>'}).join("")+'</div>':'<p class="sub">Chưa khai báo ở tab YEU_CAU_THI_TRUONG.</p>');
+  var al=A.filter(function(x){return ids.indexOf(x.id)>=0});
+  h+='<h4 class="msec">Cảnh báo của đơn</h4><ul class="alerts">'+(al.map(function(a2){return '<li><span class="pill '+(a2.sev===2?"crit":"warn")+'">'+(a2.sev===2?"Gấp":"Chú ý")+'</span><div class="al-t"><b>'+esc(a2.id)+'</b> · '+a2.t+'</div><div class="al-a">'+esc(a2.a)+'</div></li>'}).join("")||'<li><span class="pill ok">Ổn</span><div class="al-t">Đơn này không có cảnh báo.</div></li>')+'</ul>';
+  h+='<div class="mfoot"><button type="button" class="btn" data-a="edit">Sửa đơn</button><button type="button" class="btn pri" data-a="close">Đóng</button></div>';
+  var bg=openModal(h,true);
+  bg.addEventListener("click",function(e){var b=e.target.closest("[data-a]"); if(!b) return; if(b.getAttribute("data-a")==="close") closeModal(); else {closeModal(); openContractEdit(id);} });
+}
+function renderDash(){
+  $("asof").textContent="Số liệu tính đến "+TODAY.getDate()+"/"+(TODAY.getMonth()+1)+"/"+TODAY.getFullYear()+(DEMO?" (dữ liệu mẫu).":".");
+  var A=buildAlerts().sort(function(x,y){return y.sev-x.sev}); var nG=0; A.forEach(function(a){if(a.sev===2&&++nG>5)a.sev=1});
+  var live=CT.filter(function(c){return dd(c.exp)>=0}).length;
+  var toShip=sum(CT.filter(function(c){return c.type==="bán"&&c.prog!==null}).map(function(c){return (ctValue(c)||0)*(1-c.prog/100)}));
+  var qcWarn=LOTS.filter(function(l){return l.qc==="Cảnh báo"}).length;
+  var expSoon=CT.filter(function(c){var d=dd(c.exp);return d>=0&&d<=C("ngay_sap_het_han")}).length;
+  var arOver=AR[1]+AR[2]+AR[3], apOver=AP[1]+AP[2]+AP[3];
+  var nUrg=A.filter(function(x){return x.sev===2}).length, adv=sum(ADV.map(function(u){return u.amt}));
+  var mq=LOTS.filter(function(l){return l.mg!=null&&l.qty>0}), mgAvg=mq.length?sum(mq.map(function(l){return l.mg*l.qty}))/sum(mq.map(function(l){return l.qty})):null;
+  var BIG=[
+    {l:"Việc gấp cần xử lý",v:nUrg,s:nUrg?"xem danh sách bên dưới":"không có",c:nUrg?"var(--crit)":"var(--ok)"},
+    {l:"Còn phải giao (HĐ bán)",v:"$"+nf.format(toShip),s:"theo tiến độ thực hiện",c:"var(--accent)"},
+    {l:"Phải thu quá hạn",v:nf.format(arOver)+" tỷ",s:"phải trả quá hạn "+nf.format(apOver)+" tỷ",c:arOver?"var(--warn)":"var(--ok)"}
+  ];
+  var T=[
+    {l:"Biên lợi nhuận bình quân",v:mgAvg==null?"—":nf.format(mgAvg)+"%",s:"các lô đã có giá",c:mgAvg!=null&&mgAvg<C("bien_loi_nhuan_thap")?"var(--warn)":"var(--ok)"},
+    {l:"Tiền đang ứng trước",v:nf.format(adv)+" tỷ",s:ADV.length+" khoản chưa bù hàng",c:ADV.some(function(u){return u.due&&dd(u.due)<0})?"var(--crit)":"var(--accent)"},
+    {l:"Hợp đồng đang hiệu lực",v:live,s:"trên "+CT.length+" hợp đồng",c:"var(--ok)"},
+    {l:"Lô đang mở",v:LOTS.length,s:"chưa đóng hồ sơ",c:"var(--accent)"},
+    {l:"Lô cảnh báo chất lượng",v:qcWarn,s:qcWarn?"cần xử lý":"không có",c:qcWarn?"var(--crit)":"var(--ok)"},
+    {l:"HĐ hết hạn trong "+C("ngay_sap_het_han")+" ngày",v:expSoon,s:"cần gia hạn hoặc chốt",c:expSoon?"var(--warn)":"var(--ok)"}
+  ];
+  var th=""; T.forEach(function(t){th+='<div class="tile" style="--s:'+t.c+'"><div class="l">'+esc(t.l)+'</div><div class="v">'+esc(String(t.v))+'</div><div class="s">'+esc(t.s)+'</div></div>'});
+  var bh=""; BIG.forEach(function(t){bh+='<div class="tile big" style="--s:'+t.c+'"><div class="l">'+esc(t.l)+'</div><div class="v">'+esc(String(t.v))+'</div><div class="s">'+esc(t.s)+'</div></div>'});
+  $("tiles-big").innerHTML=bh; $("tiles").innerHTML=th;
+  function alLi(a){return '<li><span class="pill '+(a.sev===2?"crit":"warn")+'">'+(a.sev===2?"Gấp":"Chú ý")+'</span><div class="al-t"><b>'+esc(a.id)+'</b> · '+a.t+'</div><div class="al-a">'+esc(a.a)+'</div></li>'}
+  var TOPN=6;
+  $("alerts").innerHTML=A.slice(0,TOPN).map(alLi).join("")||'<li><span class="pill ok">Ổn</span><div class="al-t">Không có việc cần xử lý.</div></li>';
+  var rest=A.slice(TOPN); $("amore").classList.toggle("hidden",!rest.length); $("amore-s").textContent="Xem thêm "+rest.length+" việc"; $("alerts2").innerHTML=rest.map(alLi).join("");
+  $("rules").innerHTML=
+    "<li>Hợp đồng hết hạn trong "+C("ngay_sap_het_han")+" ngày mà chưa thực hiện đủ: Chú ý; trong "+C("ngay_giao_gap")+" ngày: Gấp.</li>"+
+    "<li>Hạn giao trong "+C("ngay_giao_gap")+" ngày hoặc đã quá hạn mà chưa giao đủ: Gấp.</li>"+
+    "<li>HĐ bán chưa đủ nguồn từ các HĐ mua: Chú ý; hạn giao trong "+C("ngay_thieu_nguon_gap")+" ngày: Gấp.</li>"+
+    "<li>Lô đã sang khâu Hồ sơ xuất khẩu mà thiếu chứng từ: Chú ý; sang khâu Logistics mà thiếu: Gấp.</li>"+
+    "<li>Lô bị cảnh báo chất lượng: Gấp. Chưa có kết quả kiểm nghiệm mà đã sang Hồ sơ xuất khẩu: Chú ý.</li>"+
+    "<li>Lô bán lỗ: Gấp; biên lợi nhuận dưới "+C("bien_loi_nhuan_thap")+"%: Chú ý; hao hụt trên "+C("hao_hut_canh_bao")+"%: Chú ý.</li>"+
+    "<li>Tiền ứng trước quá hạn giao mà chưa bù hàng: Gấp; đến hạn trong "+C("ngay_giao_gap")+" ngày: Chú ý.</li>"+
+    "<li>HĐ mua giao sau hạn giao HĐ bán: Gấp; đệm dưới "+C("dem_ngay_giao_mua")+" ngày: Chú ý. Đơn nhận quá "+C("dem_ngay_tim_nguon")+" ngày mà chưa đủ nguồn: Gấp.</li>"+
+    "<li>Nguồn cấp hàng chưa đủ điều kiện hoặc hết hạn cho thị trường của HĐ bán: Gấp; chưa khai báo hoặc sắp hết hạn: Chú ý.</li>"+
+    "<li>HĐ bán từ "+C("nguon_don_le_toi_thieu_tan")+" tấn mà hơn "+C("nguon_don_le_canh_bao")+"% lấy từ một nhà cung cấp: Chú ý.</li>"+
+    "<li>Đối tác xếp hạng Rủi ro (xem tab Đối tác).</li>";
+  var ag=$("aging"); ag.innerHTML=""; var mx=Math.max.apply(null,AR.concat(AP).concat([0.0001]));
+  ag.insertAdjacentHTML("beforeend",'<div class="sub2">Phải thu (khách nợ mình)</div>');
+  bars(ag,BUCKETS,AR,mx,"var(--b1)",function(v){return nf.format(v)});
+  ag.insertAdjacentHTML("beforeend",'<div class="sub2">Phải trả (mình nợ nhà cung cấp)</div>');
+  bars(ag,BUCKETS,AP,mx,"var(--b5)",function(v){return nf.format(v)});
+  var mk={}; CT.filter(function(c){return c.type==="bán"&&c.qty!=null}).forEach(function(c){var k=grpOf(c.mkt);mk[k]=(mk[k]||0)+c.qty});
+  var ml=Object.keys(mk), mv=ml.map(function(k){return mk[k]}); $("mkt").innerHTML="";
+  bars($("mkt"),ml,mv,Math.max.apply(null,mv.concat([0.0001])),"var(--b2)",function(v){return nf.format(v)});
+  var lh='<thead><tr><th>Lô</th><th>Sản phẩm</th><th>Thị trường</th><th>HĐ mua</th><th>HĐ bán</th><th>Tấn</th><th>Khâu hiện tại</th><th>Chứng từ</th><th>Chất lượng</th><th>Biên LN</th><th>Hao hụt</th></tr></thead><tbody>';
+  LOTS.forEach(function(l){
+    var p=""; for(var i=1;i<=6;i++){p+='<i class="'+(i<l.stage?"done":i===l.stage?"now":"")+'"></i>'}
+    var miss=l.total-l.docs, qcc=l.qc==="Đạt"?"ok":l.qc==="Cảnh báo"?"crit":"warn";
+    lh+='<tr><td class="id">'+esc(l.id)+'</td><td>'+esc(l.prod)+'</td><td>'+esc(l.mkt)+'</td><td class="id">'+esc(l.buy)+'</td><td class="id">'+esc(l.sell)+'</td><td class="num">'+nf.format(l.qty)+'</td><td><div class="pipe" title="Khâu '+l.stage+'/6">'+p+'</div><div style="font-size:12px;color:var(--muted)">'+l.stage+'/6 · '+esc(STAGES[l.stage-1]||"")+'</div></td><td class="num"><span class="pill '+(miss<=0?"ok":l.stage>=5?"crit":"warn")+'">'+l.docs+'/'+l.total+'</span></td><td><span class="pill '+qcc+'">'+esc(l.qc)+'</span></td><td class="num">'+(l.mg==null?"—":'<span class="pill '+(l.mg<0?"crit":l.mg<C("bien_loi_nhuan_thap")?"warn":"ok")+'">'+nf.format(l.mg)+'%</span>')+'</td><td class="num">'+(l.loss==null?"—":'<span class="pill '+(l.loss>C("hao_hut_canh_bao")?"warn":"ok")+'">'+nf.format(l.loss)+'%</span>')+'</td></tr>';
+  });
+  $("lots").innerHTML=lh+"</tbody>";
+  renderBoard(A); renderFin(A); renderLegends();
+  var chh='<thead><tr><th>Mã</th><th>Loại</th><th>Đối tác</th><th>Sản phẩm</th><th>Tấn</th><th>Giá trị</th><th>Hạn giao</th><th>Hết hạn</th><th>Liên kết HĐ</th><th>Tiến độ</th><th></th></tr></thead><tbody>';
+  CT.slice().sort(function(a,b){return dd(a.exp)-dd(b.exp)}).forEach(function(c){
+    var le=dd(c.exp), lc=le<=C("ngay_giao_gap")?"crit":le<=C("ngay_sap_het_han")?"warn":"ok";
+    var pg=c.prog===null?'<span style="color:var(--muted)">—</span>':'<div class="pg"><div class="trk"><div class="fil" style="width:'+Math.min(100,c.prog)+'%"></div></div><span>'+c.prog+'%</span></div>';
+    var lk="—";
+    if(c.type==="bán"&&c.qty!=null){
+      var cv=covered(c.id), cp=c.qty?Math.round(cv/c.qty*100):0;
+      lk=(srcOf(c.id).map(function(a){return esc(a.buy)+" ("+nf.format(a.qty)+"t)"}).join(" + ")||"chưa gán")+' <span class="pill '+(cp>=100?"ok":"warn")+'">phủ '+cp+'%</span>';
+    } else if(c.type==="mua"){ lk=useOf(c.id).map(function(a){return "→ "+esc(a.sell)}).join(", ")||"chưa gán"; }
+    chh+='<tr><td class="id">'+esc(c.id)+'</td><td><span class="typ">'+esc(c.type)+'</span></td><td>'+esc(c.party)+'</td><td>'+esc(c.prod)+'</td><td class="num">'+(c.qty==null?"—":nf.format(c.qty))+'</td><td class="num">'+money(c)+'</td><td class="num">'+(c.due?dmy(c.due):"—")+'</td><td class="num">'+dmy(c.exp)+' <span class="pill '+lc+'">'+(le<0?"quá "+(-le)+" ngày":"còn "+le+" ngày")+'</span></td><td style="font-size:12.5px;overflow-wrap:anywhere;min-width:150px">'+lk+'</td><td>'+pg+'</td><td><button type="button" class="btn" style="padding:4px 10px;font-size:12.5px" data-edit="'+esc(c.id)+'">Sửa</button></td></tr>';
+  });
+  $("cts").innerHTML=chh+"</tbody>";
+}
+
+/* ===== Đối tác ===== */
+var ST={f:"all",q:"",s:"risk",sel:null};
+var RK={"Rủi ro":"crit","Theo dõi":"warn","Phát triển":"ok","Ổn định":"neu"};
+function partnerView(){
+  var L=DT.map(function(p){return {p:p,r:rate(p)}});
+  L=L.filter(function(x){return ST.f==="all"||(ST.f==="risk"?x.r.lvl===2:x.p.t===ST.f)});
+  if(ST.q) L=L.filter(function(x){return String(x.p.n).toLowerCase().indexOf(ST.q)>=0});
+  L.sort(function(a,b){
+    if(ST.s==="value") return b.p.y-a.p.y;
+    if(ST.s==="debt") return b.p.od-a.p.od||b.r.lvl-a.r.lvl;
+    if(ST.s==="idle") return b.p.last-a.p.last;
+    return b.r.lvl-a.r.lvl||b.p.od-a.p.od||b.p.y-a.p.y;
+  });
+  return L;
+}
+function partnerDetail(){
+  var el=$("pdetail"), p=null; DT.forEach(function(x){if(x.n===ST.sel)p=x});
+  if(!p){el.innerHTML='<p class="asof" style="margin:0">Không có đối tác phù hợp bộ lọc.</p>';return}
+  var r=rate(p), isK=p.t==="K";
+  var act=r.rank==="Rủi ro"?(isK?"Họp trực tiếp trong tuần; xem lại hạn mức công nợ và điều kiện thanh toán của khách.":"Họp trực tiếp trong tuần; yêu cầu bổ sung hồ sơ truy xuất, chốt lại cơ chế phạt giao trễ, chuẩn bị nguồn thay thế.")
+    :r.rank==="Theo dõi"?"Đặt lịch nhắc và kiểm tra lại sau 30 ngày."
+    :r.rank==="Phát triển"?(isK?"Đề xuất hợp đồng khung hoặc tăng khối lượng theo mùa.":"Đề xuất tăng khối lượng và ưu tiên đặt hàng."):"Giữ nhịp liên hệ định kỳ.";
+  var cts=CT.filter(function(c){return c.party===p.n}).map(function(c){return esc(c.id)+" ("+esc(money(c))+")"});
+  var g=[["Loại",isK?"Khách mua":"Nhà cung cấp"],["Khu vực",p.loc||"—"],["HĐ đang hiệu lực",p.hd],["Giá trị năm",nf.format(p.y)+" tỷ"],
+    [isK?"Khách nợ quá hạn":"Mình nợ quá hạn",p.od?nf.format(p.od)+" tỷ · "+p.d+" ngày":"Không"],
+    [isK?"Thanh toán đúng hạn":"Giao đúng hạn",p.on+"%"],[isK?"Khiếu nại 12 tháng":"Lô đạt chất lượng",isK?p.q:p.q+"%"],
+    ["Làm việc gần nhất",p.last>=999?"Chưa có":p.last+" ngày trước"]];
+  if(!isK){
+    var ml=ELIG.filter(function(e){return e.party===p.n&&eligOf(p.n,e.mkt).st!=="no"&&eligOf(p.n,e.mkt).st!=="expired"&&e.ok}).map(function(e){return e.mkt});
+    var lp=LOTS.filter(function(l){var b=ctById(l.buy);return b&&b.party===p.n&&l.cost!=null&&l.qty>0}), lq=sum(lp.map(function(l){return l.qty}));
+    var lw=LOTS.filter(function(l){var b=ctById(l.buy);return b&&b.party===p.n&&l.loss!=null&&l.qty>0}), lwq=sum(lw.map(function(l){return l.qty}));
+    var ad=sum(ADV.filter(function(u){return u.party===p.n}).map(function(u){return u.amt}));
+    g.splice(1,0,["Nhóm",p.grp||"Chưa phân nhóm"]);
+    g.push(["Đủ điều kiện thị trường",ml.length?ml.join(", "):"Chưa khai báo"],
+      ["Giá vốn bình quân (sau hao hụt)",lq?"$"+nf.format(sum(lp.map(function(l){return l.cost*l.qty}))/lq)+"/kg":"Chưa có lô"],
+      ["Hao hụt bình quân",lwq?nf.format(sum(lw.map(function(l){return l.loss*l.qty}))/lwq)+"%":"Chưa có lô"],
+      ["Tiền đang ứng",ad?nf.format(ad)+" tỷ":"Không"]);
+  }
+  var gh=""; g.forEach(function(x){gh+='<div><div class="k">'+esc(x[0])+'</div><div class="vv">'+esc(String(x[1]))+'</div></div>'});
+  el.innerHTML='<div class="dh"><h3>'+esc(p.n)+'</h3><span class="pill '+RK[r.rank]+'">'+r.rank+'</span></div><div class="dgrid">'+gh+'</div>'
+    +'<div class="dd"><div><h4>Lý do xếp hạng</h4><ul>'+r.why.map(function(w){return "<li>"+esc(w)+"</li>"}).join("")+'</ul></div>'
+    +'<div><h4>Việc nên làm</h4><p>'+esc(act)+'</p></div>'
+    +'<div><h4>Hợp đồng và ghi chú</h4><p>'+(cts.length?cts.join(", "):"Chưa có hợp đồng")+(p.note?"<br>"+esc(p.note):"")+'</p></div></div>';
+}
+function drawPartners(){
+  var L=partnerView();
+  if(!L.some(function(x){return x.p.n===ST.sel})) ST.sel=L.length?L[0].p.n:null;
+  var h='<thead><tr><th>Đối tác</th><th>Loại</th><th>Khu vực</th><th>HĐ</th><th>Giá trị năm</th><th>Nợ quá hạn</th><th>Đúng hạn</th><th>Chất lượng</th><th>Làm việc gần nhất</th><th>Xếp hạng</th></tr></thead><tbody>';
+  L.forEach(function(x){
+    var p=x.p, isK=p.t==="K";
+    h+='<tr data-n="'+esc(p.n)+'" tabindex="0" class="'+(p.n===ST.sel?"sel":"")+'"><td>'+esc(p.n)+'</td><td><span class="typ">'+(isK?"khách":(p.grp||"nhà cung cấp"))+'</span></td><td>'+esc(p.loc)+'</td><td class="num">'+p.hd+'</td><td class="num">'+nf.format(p.y)+' tỷ</td><td class="num">'+(p.od?nf.format(p.od)+' tỷ · '+p.d+' ngày':"—")+'</td><td class="num">'+p.on+'%</td><td class="num">'+(isK?p.q+" khiếu nại":p.q+"% đạt")+'</td><td class="num">'+lastTxt(p)+'</td><td><span class="pill '+RK[x.r.rank]+'">'+x.r.rank+'</span></td></tr>';
+  });
+  if(!L.length) h+='<tr><td colspan="10" style="color:var(--muted)">Không có đối tác phù hợp.</td></tr>';
+  $("ptab").innerHTML=h+"</tbody>"; partnerDetail();
+}
+function renderPartners(){
+  var KL=DT.filter(function(p){return p.t==="K"}), NL=DT.filter(function(p){return p.t==="N"});
+  $("pasof").textContent=DT.length+" đối tác ("+KL.length+" khách mua, "+NL.length+" nhà cung cấp)"+(DEMO?", dữ liệu mẫu":"")+". Bấm một dòng để xem chi tiết.";
+  function topOf(L){var m=L[0];L.forEach(function(p){if(p.y>m.y)m=p});return m}
+  var sK=sum(KL.map(function(p){return p.y})), sN=sum(NL.map(function(p){return p.y}));
+  var tk=KL.length?topOf(KL):null, tn=NL.length?topOf(NL):null;
+  var pk=tk&&sK?Math.round(tk.y/sK*100):0, pn=tn&&sN?Math.round(tn.y/sN*100):0, lim=C("tap_trung_canh_bao");
+  var nr=DT.filter(function(p){return rate(p).lvl===2}).length, nw=DT.filter(function(p){return rate(p).lvl===1}).length;
+  var T=[
+    {l:"Khách mua",v:KL.length,s:"giá trị năm "+nf.format(sK)+" tỷ",c:"var(--accent)"},
+    {l:"Nhà cung cấp",v:NL.length,s:"giá trị năm "+nf.format(sN)+" tỷ",c:"var(--accent)"},
+    {l:"Xếp hạng Rủi ro",v:nr,s:"cần làm việc trực tiếp",c:nr?"var(--crit)":"var(--ok)"},
+    {l:"Xếp hạng Theo dõi",v:nw,s:"đặt lịch kiểm tra lại",c:nw?"var(--warn)":"var(--ok)"},
+    {l:"Khách lớn nhất chiếm",v:pk+"%",s:(tk?tk.n:"—")+(pk>=lim?" · tập trung cao":""),c:pk>=lim?"var(--warn)":"var(--ok)"},
+    {l:"Nhà cung cấp lớn nhất chiếm",v:pn+"%",s:(tn?tn.n:"—")+(pn>=lim?" · tập trung cao":""),c:pn>=lim?"var(--warn)":"var(--ok)"}
+  ];
+  var th=""; T.forEach(function(t){th+='<div class="tile" style="--s:'+t.c+'"><div class="l">'+esc(t.l)+'</div><div class="v">'+esc(String(t.v))+'</div><div class="s">'+esc(t.s)+'</div></div>'});
+  $("ptiles").innerHTML=th;
+  $("prules").innerHTML="<b>Rủi ro:</b> nợ quá hạn trên "+C("no_rui_ro_ngay")+" ngày; đúng hạn dưới "+C("dung_han_rui_ro")+"%; khách có từ "+C("khieu_nai_rui_ro")+" khiếu nại trong 12 tháng; nhà cung cấp có dưới "+C("qc_rui_ro")+"% lô đạt chất lượng. "
+    +"<b>Theo dõi:</b> có nợ quá hạn; đúng hạn dưới "+C("dung_han_theo_doi")+"%; khách có "+C("khieu_nai_theo_doi")+" khiếu nại; nhà cung cấp dưới "+C("qc_theo_doi")+"% lô đạt; chưa làm việc quá "+C("ngay_khong_lien_he")+" ngày. "
+    +"<b>Phát triển:</b> không có điểm cần lưu ý, đúng hạn từ "+C("dung_han_phat_trien")+"%, giá trị năm từ "+C("gia_tri_phat_trien_khach")+" tỷ (khách) hoặc "+C("gia_tri_phat_trien_ncc")+" tỷ (nhà cung cấp).";
+  drawPartners();
+}
+function bindPartners(){
+  var tb=$("ptab");
+  function pick(e){var tr=e.target.closest("tr[data-n]"); if(!tr)return; ST.sel=tr.getAttribute("data-n"); drawPartners();
+    if(e.type==="keydown"){var f=[].filter.call(document.querySelectorAll("#ptab tr[data-n]"),function(x){return x.getAttribute("data-n")===ST.sel})[0]; if(f)f.focus();}}
+  tb.addEventListener("click",pick);
+  tb.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();pick(e)}});
+  $("pseg").addEventListener("click",function(e){
+    var b=e.target.closest("button[data-f]"); if(!b)return; ST.f=b.getAttribute("data-f");
+    [].forEach.call(this.querySelectorAll("button"),function(x){x.setAttribute("aria-pressed",String(x===b))}); drawPartners();
+  });
+  $("psearch").addEventListener("input",function(){ST.q=this.value.trim().toLowerCase();drawPartners()});
+  $("psort").addEventListener("change",function(){ST.s=this.value;drawPartners()});
+}
+
+/* ===== Đầu trang, cửa sổ nổi, form nhập, báo cáo trình chiếu ===== */
+function T(k,d){var v=TXT[k]; return has(v)&&String(v).trim()!==""?String(v):d}
+function ymd(d){return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
+function renderCompany(){
+  var rows=DB.CONG_TY||[], h="";
+  if(!rows.length){$("coinfo").innerHTML='<p class="asof" style="margin:0;grid-column:1/-1">Chưa có tab CONG_TY trong Sheet.</p>';return}
+  rows.forEach(function(r){var v=has(r.gia_tri)&&String(r.gia_tri).trim()!==""?String(r.gia_tri):"";
+    h+='<div><div class="k">'+esc(r.nhan||r.khoa)+'</div><div class="vv"'+(v?"":' style="color:var(--muted);font-weight:400"')+'>'+esc(v||"Chưa nhập")+'</div></div>'});
+  $("coinfo").innerHTML=h;
+}
+function legendHtml(rows,fb){
+  var L=(rows&&rows.length?rows:fb).map(function(r,i){return {so:has(r.so)?r.so:i+1,ten:r.ten,mo:r.mo_ta||"",xong:r.xong_khi||""}});
+  return '<div class="tablewrap"><table class="lgt"><thead><tr><th>#</th><th>Tên</th><th>Làm gì</th><th>Xong khi</th></tr></thead><tbody>'+L.map(function(x){return '<tr><td class="num">'+esc(x.so)+'</td><td><b>'+esc(x.ten)+'</b></td><td data-l="Làm gì">'+esc(x.mo)+'</td><td data-l="Xong khi">'+esc(x.xong)+'</td></tr>'}).join("")+'</tbody></table></div>';
+}
+function renderLegends(){
+  $("khau-legend").innerHTML=legendHtml(DB.KHAU,STAGES.map(function(n){return {ten:n}}));
+  $("buoc-legend").innerHTML=legendHtml(DB.BUOC_DON,STG.map(function(n){return {ten:n}}));
+}
+function bindLegend(btn,box,word){
+  btn.onclick=function(){var open=box.classList.toggle("hidden")===false; btn.setAttribute("aria-expanded",String(open)); btn.textContent=(open?"Ẩn mô tả ":"Hiện mô tả ")+word;};
+}
+function renderChrome(){
+  var un=T("ten_don_vi","");
+  $("kicker").textContent="✦ "+T("nhan_dau_trang","Hệ thống quản lý")+(/[\[\]]/.test(un)?"":" · "+un);
+  $("title").textContent=T("tieu_de","Quản lý thu mua – xuất khẩu thủy hải sản"); document.title=$("title").textContent;
+  var lg=$("logo"), url=T("logo_url",""); lg.innerHTML="";
+  if(/^https:\/\//.test(url)){var im=document.createElement("img"); im.alt=""; im.src=url; lg.appendChild(im)}
+  else lg.textContent=(/[\[\]]/.test(un)?"":un.trim().charAt(0).toUpperCase())||"•";
+  var nm=T("nguoi_phu_trach","Director");
+  $("author").innerHTML='<div class="avatar">'+esc(nm.trim().charAt(0).toUpperCase())+'</div><div><b>'+esc(nm)+'</b><span>'+esc(T("chuc_danh","Văn phòng tại Việt Nam"))+'</span></div>';
+  var ft=T("chan_trang",""); $("foot").textContent=ft; $("foot").classList.toggle("hidden",!ft);
+}
+var MODAL=null;
+function closeModal(){ if(MODAL){MODAL.remove();MODAL=null;document.body.classList.remove("modal-open")} }
+function openModal(html,wide){
+  closeModal();
+  var bg=document.createElement("div"); bg.className="modal-bg"; bg.setAttribute("role","dialog"); bg.setAttribute("aria-modal","true");
+  bg.innerHTML='<div class="modal'+(wide?" wide":"")+'" tabindex="-1">'+html+'</div>';
+  bg.addEventListener("mousedown",function(e){if(e.target===bg)closeModal()});
+  document.body.appendChild(bg); MODAL=bg; document.body.classList.add("modal-open");
+  var f=bg.querySelector("input,select,textarea")||bg.querySelector(".modal"); if(f)f.focus({preventScroll:true});
+  return bg;
+}
+document.addEventListener("keydown",function(e){
+  if(!MODAL) return;
+  if(e.key==="Escape") closeModal();
+  else if(MODAL._key) MODAL._key(e);
+});
+function refresh(){ buildModel(); renderChrome(); renderCompany(); renderMap(); renderDash(); renderPartners(); }
+function saveRow(tab,obj,done){
+  if(DEMO){ (DB[tab]=DB[tab]||[]).push(obj); refresh(); done(true,"Đã thêm vào bản xem mẫu (không lưu vào Sheet)."); return; }
+  if(!(window.google&&google.script&&google.script.run)){ done(false,"Trang này chỉ xem. Nhập và sửa dữ liệu trực tiếp trong Google Sheet."); return; }
+  google.script.run
+    .withSuccessHandler(function(){ (DB[tab]=DB[tab]||[]).push(obj); refresh(); done(true,"Đã lưu vào Google Sheet."); })
+    .withFailureHandler(function(e){ done(false,"Không lưu được: "+(e&&e.message||e)+" Có thể tài khoản này chỉ có quyền xem Sheet."); })
+    .addRow(tab,obj);
+}
+function saveUpdate(tab,key,items,done){
+  var kc=tab==="CONG_TY"?"khoa":"id";
+  function local(){ items.forEach(function(it){ var row=(DB[tab]||[]).filter(function(r){return String(r[kc])===String(it.key)})[0]; if(row) Object.keys(it.obj).forEach(function(f){row[f]=it.obj[f]}); }); refresh(); }
+  if(DEMO){ local(); done(true,"Đã cập nhật trong bản xem mẫu (không lưu vào Sheet)."); return; }
+  if(!(window.google&&google.script&&google.script.run)){ done(false,"Trang này chỉ xem. Nhập và sửa dữ liệu trực tiếp trong Google Sheet."); return; }
+  google.script.run
+    .withSuccessHandler(function(){ local(); done(true,"Đã lưu vào Google Sheet."); })
+    .withFailureHandler(function(e){ done(false,"Không lưu được: "+(e&&e.message||e)+" Có thể tài khoản này chỉ có quyền xem Sheet."); })
+    .updateRows(tab,items.map(function(it){return {key:it.key,obj:it.obj}}));
+}
+function formModal(title,tab,fields,check,saver,closeOk){
+  var dl='<datalist id="dl-dt">'+DT.map(function(p){return '<option value="'+esc(p.n)+'">'}).join("")+'</datalist><datalist id="dl-tt">'+MK.map(function(m){return '<option value="'+esc(m.c)+'">'}).join("")+'</datalist>';
+  var h='<h3>'+esc(title)+'</h3><form id="mform" novalidate><div class="fgrid">';
+  fields.forEach(function(f){
+    var id="f-"+f.k, req=f.req?" *":"", cls=f.full?' class="full"':"";
+    if(f.type==="select") h+='<label'+cls+'>'+esc(f.label)+req+'<select id="'+id+'">'+f.opts.map(function(o){return '<option value="'+esc(o)+'"'+(String(o)===String(f.def||"")?" selected":"")+'>'+esc(o||"—")+'</option>'}).join("")+'</select></label>';
+    else if(f.type==="textarea") h+='<label'+cls+'>'+esc(f.label)+req+'<textarea id="'+id+'" rows="3"></textarea></label>';
+    else h+='<label'+cls+'>'+esc(f.label)+req+'<input id="'+id+'" type="'+(f.type||"text")+'"'+(f.list?' list="'+(f.list==="tt"?"dl-tt":"dl-dt")+'"':"")+(f.ph?' placeholder="'+esc(f.ph)+'"':"")+(f.def?' value="'+esc(f.def)+'"':"")+(f.type==="number"?' step="any" inputmode="decimal"':"")+'></label>';
+  });
+  h+='</div>'+dl+'<div class="fmsg" id="fmsg" role="status"></div><div class="mfoot"><button type="button" class="btn" data-a="close">Đóng</button><button type="submit" class="btn pri" id="fsave">Lưu</button></div></form>';
+  var bg=openModal(h,false), form=bg.querySelector("#mform"), msg=bg.querySelector("#fmsg");
+  bg.addEventListener("click",function(e){ if(e.target.closest("[data-a=close]")) closeModal(); });
+  form.addEventListener("submit",function(e){
+    e.preventDefault(); var o={}, bad=null;
+    fields.forEach(function(f){
+      var v=bg.querySelector("#f-"+f.k).value.trim();
+      if(f.req&&!v&&!bad) bad=f.label;
+      if(v!==""||f.keepEmpty){ o[f.k]=(f.type==="number"&&v!=="")?Number(v):v; }
+    });
+    if(bad){ msg.style.color="var(--crit)"; msg.textContent="Cần nhập: "+bad+"."; return }
+    var err=check(o); if(err){ msg.style.color="var(--crit)"; msg.textContent=err; return }
+    var btn=bg.querySelector("#fsave"); btn.disabled=true; msg.style.color="var(--muted)"; msg.textContent="Đang lưu…";
+    (saver||function(o2,cb){saveRow(tab,o2,cb)})(o,function(ok,text){ btn.disabled=false; msg.style.color=ok?"var(--ok)":"var(--crit)"; msg.textContent=text; if(ok){ if(closeOk) setTimeout(closeModal,700); else form.reset(); } });
+  });
+}
+function openContractForm(){
+  openContractForm0();
+  var bg=MODAL, sel=bg.querySelector("#f-loai"), inp=bg.querySelector("#f-thi_truong"), fld=inp.closest("label");
+  function sync(){var b=sel.value==="bán"; fld.style.display=b?"":"none"; if(!b) inp.value=""}
+  sel.onchange=sync; sync();
+}
+function openContractForm0(){
+  formModal("Thêm hợp đồng","HOP_DONG",[
+    {k:"id",label:"Mã hợp đồng",req:1,ph:"HDB-004"},
+    {k:"loai",label:"Loại",type:"select",opts:["mua","bán","dịch vụ"],req:1},
+    {k:"doi_tac",label:"Đối tác (nhà cung cấp trong nước hoặc khách nước ngoài)",req:1,list:1,full:1},
+    {k:"san_pham",label:"Sản phẩm"},
+    {k:"khoi_luong_tan",label:"Khối lượng (tấn)",type:"number"},
+    {k:"don_gia",label:"Đơn giá (USD/kg hoặc VND/kg)",type:"number"},
+    {k:"tien_te",label:"Tiền tệ",type:"select",opts:["","USD","VND"]},
+    {k:"han_giao",label:"Hạn giao",type:"date"},
+    {k:"het_han",label:"Hết hạn hợp đồng",type:"date",req:1},
+    {k:"tien_do_pct",label:"Tiến độ (%)",type:"number"},
+    {k:"thi_truong",label:"Nước nhập khẩu (khách mua hàng của mình)",list:"tt"},
+    {k:"ngay_ky",label:"Ngày nhận hoặc ký đơn",type:"date",def:ymd(TODAY)}
+  ],function(o){
+    if((DB.HOP_DONG||[]).some(function(r){return String(r.id)===String(o.id)})) return "Mã hợp đồng này đã có.";
+    if(o.tien_do_pct!=null&&(o.tien_do_pct<0||o.tien_do_pct>100)) return "Tiến độ phải từ 0 đến 100.";
+    return "";
+  });
+}
+function openCompanyEdit(){
+  var rows=DB.CONG_TY||[]; if(!rows.length){ openModal('<h3>Chưa có tab CONG_TY</h3><p class="sub">Thêm tab CONG_TY vào Sheet theo file mẫu rồi mở lại trang.</p><div class="mfoot"><button type="button" class="btn pri" data-a="close">Đóng</button></div>').addEventListener("click",function(e){if(e.target.closest("[data-a=close]"))closeModal()}); return }
+  var F=rows.map(function(r){return {k:r.khoa,label:r.nhan||r.khoa,def:has(r.gia_tri)?String(r.gia_tri):"",keepEmpty:1,full:/dia_chi|chung_nhan|ghi_chu|ma_co_so|nganh/.test(r.khoa)}});
+  formModal("Sửa thông tin công ty","CONG_TY",F,function(){return ""},function(o,cb){
+    var items=[]; rows.forEach(function(r){var nv=o[r.khoa]||"", ov=has(r.gia_tri)?String(r.gia_tri):""; if(nv!==ov) items.push({key:r.khoa,obj:{gia_tri:nv}})});
+    if(!items.length){cb(true,"Không có thay đổi.");return}
+    saveUpdate("CONG_TY",null,items,cb);
+  },true);
+}
+function openContractEdit(id){
+  var c=(DB.HOP_DONG||[]).filter(function(r){return String(r.id)===String(id)})[0]; if(!c) return;
+  var d=function(v){return has(v)?String(v).slice(0,10):""}, nv=function(v){return has(v)?String(v):""};
+  var F=[{k:"tien_do_pct",label:"Tiến độ (%)",type:"number",def:nv(c.tien_do_pct)},
+    {k:"han_giao",label:"Hạn giao",type:"date",def:d(c.han_giao)},{k:"het_han",label:"Hết hạn hợp đồng",type:"date",def:d(c.het_han),req:1},
+    {k:"khoi_luong_tan",label:"Khối lượng (tấn)",type:"number",def:nv(c.khoi_luong_tan)},{k:"don_gia",label:"Đơn giá",type:"number",def:nv(c.don_gia)},
+    {k:"san_pham",label:"Sản phẩm",def:nv(c.san_pham),full:1},{k:"thi_truong",label:"Thị trường",def:nv(c.thi_truong),list:"tt"},{k:"ngay_ky",label:"Ngày nhận hoặc ký",type:"date",def:d(c.ngay_ky)}];
+  formModal("Sửa hợp đồng "+id+" · "+(c.doi_tac||""),"HOP_DONG",F,function(o){
+    if(o.tien_do_pct!=null&&o.tien_do_pct!==""&&(o.tien_do_pct<0||o.tien_do_pct>100)) return "Tiến độ phải từ 0 đến 100.";
+    return "";
+  },function(o,cb){
+    var obj={}; F.forEach(function(f){ if(o[f.k]!==undefined&&String(o[f.k])!==String(f.def)) obj[f.k]=o[f.k]; });
+    if(!Object.keys(obj).length){cb(true,"Không có thay đổi.");return}
+    saveUpdate("HOP_DONG",id,[{key:id,obj:obj}],cb);
+  },true);
+}
+function openContactForm(){
+  formModal("Ghi lần làm việc với đối tác","LIEN_HE",[
+    {k:"doi_tac",label:"Đối tác",req:1,list:1,full:1},
+    {k:"ngay",label:"Ngày",type:"date",req:1,def:ymd(TODAY)},
+    {k:"noi_dung",label:"Nội dung, cam kết, việc cần theo dõi",type:"textarea",req:1,full:1}
+  ],function(o){
+    if(!DT.some(function(p){return p.n===o.doi_tac})) return "Tên đối tác chưa có trong tab DOI_TAC. Chọn từ danh sách gợi ý.";
+    return "";
+  });
+}
+function openCatalog(){
+  var info={NHANH:"Cây sơ đồ",DOI_TAC:"Khách mua và nhà cung cấp",HOP_DONG:"Hợp đồng mua, bán, dịch vụ",LO_HANG:"Lô hàng",HD_LIEN_KET:"HĐ bán lấy nguồn từ HĐ mua",CONG_NO:"Phải thu, phải trả",UNG_TRUOC:"Tiền ứng trước cho nhà cung cấp",NCC_THI_TRUONG:"Nhà cung cấp đủ điều kiện theo thị trường",THI_TRUONG:"Nước thuộc nhóm thị trường nào",KHAU:"Mô tả 6 khâu của lô",BUOC_DON:"Mô tả 6 bước của đơn",YEU_CAU_THI_TRUONG:"Chứng từ bắt buộc theo nhóm thị trường",CONG_TY:"Hồ sơ công ty",LIEN_HE:"Nhật ký làm việc với đối tác",CAI_DAT:"Ngưỡng cảnh báo, tên đơn vị, logo"};
+  var h='<h3>Danh mục dữ liệu</h3><div class="tablewrap"><table style="min-width:420px"><thead><tr><th>Tab</th><th>Nội dung</th><th>Số dòng</th></tr></thead><tbody>';
+  REQUIRED.concat(["UNG_TRUOC","NCC_THI_TRUONG","THI_TRUONG","YEU_CAU_THI_TRUONG","CONG_TY","KHAU","BUOC_DON"]).forEach(function(t){h+='<tr><td><span class="chip">'+t+'</span></td><td>'+esc(info[t]||"")+'</td><td class="num">'+(DB[t]||[]).length+'</td></tr>'});
+  h+='</tbody></table></div><p class="sub" style="margin-top:12px">Sửa nội dung, ngưỡng cảnh báo, tên đơn vị và logo trực tiếp trong Google Sheet; mở lại trang là áp dụng.</p><div class="mfoot"><button type="button" class="btn pri" data-a="close">Đóng</button></div>';
+  var bg=openModal(h,false); bg.addEventListener("click",function(e){if(e.target.closest("[data-a=close]"))closeModal()});
+}
+/* ===== Tab, khởi động ===== */
+var VIEWS={"so-do":"map","dashboard":"dash","doi-tac":"part","tai-chinh":"fin","cong-ty":"co","cau-truc":"data"};
+function show(which){
+  ["map","dash","fin","part","co","data"].forEach(function(k){
+    $("p-"+k).classList.toggle("hidden",k!==which);
+    $("t-"+k).setAttribute("aria-selected",String(k===which));
+  });
+}
+function route(){show(VIEWS[location.hash.replace("#","")]||"dash")}
+function bindTabs(){
+  $("a-hd").onclick=openContractForm; bindLegend($("tg-khau"),$("khau-legend"),"6 khâu"); bindLegend($("tg-buoc"),$("buoc-legend"),"6 bước");
+  $("board").addEventListener("click",function(e){var b=e.target.closest("[data-o]"); if(b) openOrder(b.getAttribute("data-o"))});
+  $("ogrp").addEventListener("click",function(e){var b=e.target.closest("[data-g]"); if(!b) return; OF.g=b.getAttribute("data-g"); renderBoard(buildAlerts())}); $("cts").addEventListener("click",function(e){var b=e.target.closest("[data-edit]"); if(b) openContractEdit(b.getAttribute("data-edit"))}); $("a-co").onclick=openCompanyEdit; $("a-lh").onclick=openContactForm; $("a-dm").onclick=openCatalog;
+  Object.keys(VIEWS).forEach(function(h){
+    $("t-"+VIEWS[h]).onclick=function(){show(VIEWS[h]);try{location.hash=h}catch(e){}};
+  });
+  window.addEventListener("hashchange",route);
+}
+function showErr(msg){$("loading").classList.add("hidden");$("err").classList.remove("hidden");$("err").innerHTML=msg}
+function init(db,demo){
+  DB=db||{}; DEMO=!!demo;
+  var miss=REQUIRED.filter(function(t){return !DB[t]});
+  if(miss.length){showErr("<b>Thiếu tab trong Google Sheet:</b> "+miss.map(esc).join(", ")+". Kiểm tra tên tab đúng như hướng dẫn (viết hoa, có gạch dưới).");return}
+  var n=new Date(); TODAY=new Date(n.getFullYear(),n.getMonth(),n.getDate());
+  if(DEMO){TODAY=new Date(2026,10,24); $("banner").classList.remove("hidden"); $("banner").innerHTML="<b>Bản xem mẫu.</b> Số liệu là giả định, tính đến 24/11/2026, chưa nối Google Sheet. Bản cài trong tài khoản Google của Director đọc dữ liệu thật từ Sheet."}
+  try{ buildModel(); renderChrome(); renderCompany(); renderMap(); renderDash(); renderPartners(); }
+  catch(e){ showErr("<b>Không đọc được dữ liệu.</b> Kiểm tra cột và định dạng ngày (yyyy-mm-dd hoặc ô ngày của Sheet). Chi tiết: "+esc(e&&e.message||e)); return }
+  $("loading").classList.add("hidden"); $("app").classList.remove("hidden"); $("actions").classList.remove("hidden"); route();
+}
+bindTabs(); bindPartners();
+if(window.DEMO_DB){ init(window.DEMO_DB,true); }
+else if(window.google&&google.script&&google.script.run){
+  google.script.run.withSuccessHandler(function(d){init(d,false)}).withFailureHandler(function(e){showErr("<b>Không tải được dữ liệu.</b> "+esc(e&&e.message||e)+" Kiểm tra Sheet đã được chia sẻ cho tài khoản đang mở trang.")}).getData();
+}else{
+  var SID="13D_F8RS0WjWfkBCuu3OGyI8NlgYNdhZnvI5HNET-jY4";
+  var TABS_=["NHANH","DOI_TAC","HOP_DONG","LO_HANG","HD_LIEN_KET","CONG_NO","UNG_TRUOC","NCC_THI_TRUONG","THI_TRUONG","YEU_CAU_THI_TRUONG","CONG_TY","KHAU","BUOC_DON","LIEN_HE","CAI_DAT"];
+  var DB_={}, left_=TABS_.length, bad_=null;
+  function p2(n){return (n<10?"0":"")+n}
+  function cell_(c){ if(!c||c.v===null||c.v===undefined) return "";
+    if(typeof c.v==="string"){ var m=/^Date\((\d+),(\d+),(\d+)/.exec(c.v); if(m) return m[1]+"-"+p2(+m[2]+1)+"-"+p2(+m[3]); }
+    return c.v }
+  function load_(tab){
+    var cb="__g_"+tab, sc=document.createElement("script");
+    window[cb]=function(r){
+      try{
+        if(r.status!=="ok") throw new Error("Tab "+tab+": "+((r.errors&&r.errors[0]&&r.errors[0].message)||r.status));
+        var cols=r.table.cols.map(function(c){return c.label||c.id}), rows=r.table.rows||[];
+        DB_[tab]=rows.map(function(rw){var o={}; cols.forEach(function(k,i){o[k]=cell_(rw.c&&rw.c[i])}); return o}).filter(function(o){return Object.keys(o).some(function(k){return o[k]!==""})});
+      }catch(e){ bad_=bad_||e }
+      if(--left_===0) done_();
+    };
+    sc.onerror=function(){ bad_=bad_||new Error("Không tải được tab "+tab+". Sheet cần mở quyền xem bằng link."); if(--left_===0) done_() };
+    sc.src="https://docs.google.com/spreadsheets/d/"+SID+"/gviz/tq?headers=1&tqx=out:json;responseHandler:"+cb+"&sheet="+tab;
+    document.head.appendChild(sc);
+  }
+  function done_(){ if(bad_){ showErr("<b>Không tải được dữ liệu.</b> "+esc(bad_.message||bad_)); return } init(DB_,false) }
+  TABS_.forEach(load_);
+}
+</script>
+</body>
+</html>
