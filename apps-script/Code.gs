@@ -19,6 +19,7 @@ function doGet(e) {
       if (p.a === 'add') addRow(d.tab, d.obj);
       else if (p.a === 'update') updateRows(d.tab, d.items);
       else if (p.a === 'contract') saveContract_(d);
+      else if (p.a === 'delete') deleteContract_(d);
       else throw new Error('Lệnh không hợp lệ.');
       out = { ok: true };
     } catch (err) {
@@ -31,6 +32,27 @@ function doGet(e) {
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('Quản lý thủy hải sản')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/** Xóa một hợp đồng và các dòng sản phẩm của nó. */
+function deleteContract_(d) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var ss = SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
+    ['HD_SAN_PHAM', 'HOP_DONG'].forEach(function (name) {
+      var sh = ss.getSheetByName(name);
+      if (!sh) throw new Error('Không thấy tab ' + name + '.');
+      var n = sh.getLastRow() - 1;
+      if (n < 1) return;
+      var col = name === 'HOP_DONG' ? 1 : 1; // cột đầu: id (HOP_DONG) hoặc hd (HD_SAN_PHAM)
+      var ids = sh.getRange(2, col, n, 1).getValues();
+      for (var i = ids.length - 1; i >= 0; i--) { if (String(ids[i][0]).trim() === String(d.id).trim()) sh.deleteRow(i + 2); }
+    });
+  } finally {
+    lock.releaseLock();
+  }
+  return true;
 }
 
 /** Lưu hợp đồng và danh sách sản phẩm của nó (tab HD_SAN_PHAM): xóa dòng cũ của hợp đồng rồi ghi lại. */

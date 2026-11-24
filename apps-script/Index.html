@@ -336,6 +336,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 
 <script>
 window.DEMO_DB=null;
+var ST_OFF=["Hoàn thành","Đã hủy"], ST_ALL=["Đang thực hiện","Hoàn thành","Đã hủy"], CT_ALL=[];
 var DB=null, CFG={}, TXT={}, TODAY=null, DEMO=false;
 var CT=[], LOTS=[], ADV=[], ELIG=[], MK=[], REQ=[], OF={g:"all"}, ALLOC=[], DT=[], AR=[0,0,0,0], AP=[0,0,0,0];
 var STAGES=["Nguồn cung","Chế biến","Chất lượng","Hồ sơ XK","Logistics","Hậu kiểm"];
@@ -367,10 +368,11 @@ function buildModel(){
   });
   CT=(DB.HOP_DONG||[]).map(function(r){return {id:r.id,type:low(r.loai),party:r.doi_tac,prod:r.san_pham,
     qty:has(r.khoi_luong_tan)?num(r.khoi_luong_tan):null,price:has(r.don_gia)?num(r.don_gia):null,cur:r.tien_te||"",
-    due:has(r.han_giao)?r.han_giao:null,exp:r.het_han,prog:has(r.tien_do_pct)?num(r.tien_do_pct):null,mkt:r.thi_truong||"",signed:has(r.ngay_ky)?r.ngay_ky:null}});
+    due:has(r.han_giao)?r.han_giao:null,exp:r.het_han,prog:has(r.tien_do_pct)?num(r.tien_do_pct):null,mkt:r.thi_truong||"",signed:has(r.ngay_ky)?r.ngay_ky:null,status:has(r.trang_thai)?String(r.trang_thai).trim():"Đang thực hiện"}});
   var LN={}; (DB.HD_SAN_PHAM||[]).forEach(function(r){ if(!has(r.hd)) return; (LN[r.hd]=LN[r.hd]||[]).push({prod:String(r.san_pham||""),qty:has(r.khoi_luong_tan)?num(r.khoi_luong_tan):0,price:has(r.don_gia)?num(r.don_gia):null}) });
   CT.forEach(function(c){ var L=LN[c.id]; if(!L||!L.length) return; c.lines=L; c.prod=L.map(function(x){return x.prod}).filter(Boolean).join(" + ");
     var q=0,qp=0,ok=true; L.forEach(function(x){q+=x.qty; if(x.price==null||!x.qty) ok=false; else qp+=x.qty*x.price}); c.qty=q||c.qty; if(ok&&q>0) c.price=qp/q; else if(L[0].price!=null) c.price=L[0].price; });
+  CT_ALL=CT; CT=CT.filter(function(c){return ST_OFF.indexOf(c.status)<0});
   LOTS=(DB.LO_HANG||[]).map(function(r){return {id:r.id,prod:r.san_pham,mkt:r.thi_truong,buy:r.hd_mua,sell:r.hd_ban,qty:num(r.khoi_luong_tan),
     stage:num(r.khau)||1,docs:num(r.so_chung_tu_du),total:has(r.tong_chung_tu)?num(r.tong_chung_tu):0,qc:r.ket_qua_qc||"Chưa có",cost:has(r.gia_von_usd_kg)?num(r.gia_von_usd_kg):null,sp:has(r.gia_ban_usd_kg)?num(r.gia_ban_usd_kg):null,loss:has(r.hao_hut_pct)?num(r.hao_hut_pct):null}});
   LOTS.forEach(function(l){l.mg=(l.cost!=null&&l.sp!=null&&l.sp>0)?(l.sp-l.cost)/l.sp*100:null});
@@ -411,7 +413,7 @@ function orderStage(c){
   if(L.length){ var m=Math.min.apply(null,L.map(function(l){return l.stage})); return m>=6?6:m>=4?5:4; }
   return 3;
 }
-function ctById(id){return CT.filter(function(c){return c.id===id})[0]}
+function ctById(id){return CT_ALL.filter(function(c){return c.id===id})[0]}
 function eligOf(party,mkt){
   var gr=grpOf(mkt), r=ELIG.filter(function(e){return e.party===party&&(e.mkt===mkt||e.mkt===gr)})[0];
   if(!r) return {st:"unknown"};
@@ -670,8 +672,8 @@ function renderDash(){
   });
   $("lots").innerHTML=lh+"</tbody>";
   renderBoard(A); renderFin(A); renderLegends();
-  var chh='<thead><tr><th>Mã</th><th>Loại</th><th>Đối tác</th><th>Sản phẩm</th><th>Tấn</th><th>Giá trị</th><th>Hạn giao</th><th>Hết hạn</th><th>Liên kết HĐ</th><th>Tiến độ</th><th></th></tr></thead><tbody>';
-  CT.slice().sort(function(a,b){return dd(a.exp)-dd(b.exp)}).forEach(function(c){
+  var chh='<thead><tr><th>Mã</th><th>Loại</th><th>Đối tác</th><th>Sản phẩm</th><th>Tấn</th><th>Giá trị</th><th>Hạn giao</th><th>Hết hạn</th><th>Liên kết HĐ</th><th>Tiến độ</th><th>Trạng thái</th><th></th></tr></thead><tbody>';
+  CT_ALL.slice().sort(function(a,b){return (ST_OFF.indexOf(a.status)<0?0:1)-(ST_OFF.indexOf(b.status)<0?0:1)||dd(a.exp)-dd(b.exp)}).forEach(function(c){
     var le=dd(c.exp), lc=le<=C("ngay_giao_gap")?"crit":le<=C("ngay_sap_het_han")?"warn":"ok";
     var pg=c.prog===null?'<span style="color:var(--muted)">—</span>':'<div class="pg"><div class="trk"><div class="fil" style="width:'+Math.min(100,c.prog)+'%"></div></div><span>'+c.prog+'%</span></div>';
     var lk="—";
@@ -679,7 +681,7 @@ function renderDash(){
       var cv=covered(c.id), cp=c.qty?Math.round(cv/c.qty*100):0;
       lk=(srcOf(c.id).map(function(a){return esc(a.buy)+" ("+nf.format(a.qty)+"t)"}).join(" + ")||"chưa gán")+' <span class="pill '+(cp>=100?"ok":"warn")+'">phủ '+cp+'%</span>';
     } else if(c.type==="mua"){ lk=useOf(c.id).map(function(a){return "→ "+esc(a.sell)}).join(", ")||"chưa gán"; }
-    chh+='<tr><td class="id">'+esc(c.id)+'</td><td><span class="typ">'+esc(c.type)+'</span></td><td>'+esc(c.party)+'</td><td>'+esc(c.prod)+'</td><td class="num">'+(c.qty==null?"—":nf.format(c.qty))+'</td><td class="num">'+money(c)+'</td><td class="num">'+(c.due?dmy(c.due):"—")+'</td><td class="num">'+dmy(c.exp)+' <span class="pill '+lc+'">'+(le<0?"quá "+(-le)+" ngày":"còn "+le+" ngày")+'</span></td><td style="font-size:12.5px;overflow-wrap:anywhere;min-width:150px">'+lk+'</td><td>'+pg+'</td><td><button type="button" class="btn" style="padding:4px 10px;font-size:12.5px" data-edit="'+esc(c.id)+'">Sửa</button></td></tr>';
+    chh+='<tr><td class="id">'+esc(c.id)+'</td><td><span class="typ">'+esc(c.type)+'</span></td><td>'+esc(c.party)+'</td><td>'+esc(c.prod)+'</td><td class="num">'+(c.qty==null?"—":nf.format(c.qty))+'</td><td class="num">'+money(c)+'</td><td class="num">'+(c.due?dmy(c.due):"—")+'</td><td class="num">'+dmy(c.exp)+' <span class="pill '+lc+'">'+(le<0?"quá "+(-le)+" ngày":"còn "+le+" ngày")+'</span></td><td style="font-size:12.5px;overflow-wrap:anywhere;min-width:150px">'+lk+'</td><td>'+pg+'</td><td><span class="pill '+(c.status==="Hoàn thành"?"ok":c.status==="Đã hủy"?"crit":"warn")+'">'+esc(c.status)+'</span></td><td><button type="button" class="btn" style="padding:4px 10px;font-size:12.5px" data-edit="'+esc(c.id)+'">Sửa</button> <button type="button" class="btn" data-del="'+esc(c.id)+'">Xóa</button></td></tr>';
   });
   $("cts").innerHTML=chh+"</tbody>";
 }
@@ -901,7 +903,8 @@ function openContractForm0(pre){
     {k:"het_han",label:"Hết hạn hợp đồng",type:"date",req:1,def:pd("het_han")},
     {k:"tien_do_pct",label:"Tiến độ (%)",type:"number",def:pd("tien_do_pct")},
     {k:"thi_truong",label:"Nước nhập khẩu (khách mua hàng của mình)",list:"tt",def:pd("thi_truong")},
-    {k:"ngay_ky",label:"Ngày nhận hoặc ký đơn",type:"date",def:pd("ngay_ky",ymd(TODAY))}
+    {k:"ngay_ky",label:"Ngày nhận hoặc ký đơn",type:"date",def:pd("ngay_ky",ymd(TODAY))},
+    {k:"trang_thai",label:"Trạng thái",type:"select",opts:ST_ALL,def:pd("trang_thai","Đang thực hiện")}
   ],function(o){
     if((DB.HOP_DONG||[]).some(function(r){return String(r.id)===String(o.id)})) return "Mã hợp đồng này đã có.";
     if(o.tien_do_pct!=null&&(o.tien_do_pct<0||o.tien_do_pct>100)) return "Tiến độ phải từ 0 đến 100.";
@@ -933,7 +936,8 @@ function openContractEdit(id){
   var d=function(v){return has(v)?String(v).slice(0,10):""}, nv=function(v){return has(v)?String(v):""};
   var F=[{k:"tien_do_pct",label:"Tiến độ (%)",type:"number",def:nv(c.tien_do_pct)},
     {k:"han_giao",label:"Hạn giao",type:"date",def:d(c.han_giao)},{k:"het_han",label:"Hết hạn hợp đồng",type:"date",def:d(c.het_han),req:1},
-    {k:"thi_truong",label:"Thị trường",def:nv(c.thi_truong),list:"tt"},{k:"ngay_ky",label:"Ngày nhận hoặc ký",type:"date",def:d(c.ngay_ky)}];
+    {k:"thi_truong",label:"Thị trường",def:nv(c.thi_truong),list:"tt"},{k:"ngay_ky",label:"Ngày nhận hoặc ký",type:"date",def:d(c.ngay_ky)},
+    {k:"trang_thai",label:"Trạng thái",type:"select",opts:ST_ALL,def:has(c.trang_thai)?String(c.trang_thai).trim():"Đang thực hiện"}];
   var LD=(DB.HD_SAN_PHAM||[]).filter(function(x){return String(x.hd)===String(id)}).map(function(x){return {san_pham:x.san_pham,khoi_luong_tan:x.khoi_luong_tan,don_gia:x.don_gia}});
   if(!LD.length&&has(c.san_pham)) LD=[{san_pham:c.san_pham,khoi_luong_tan:has(c.khoi_luong_tan)?c.khoi_luong_tan:"",don_gia:has(c.don_gia)?c.don_gia:""}];
   F.push({k:"lines",label:"Sản phẩm trong hợp đồng (thêm hoặc bớt dòng)",type:"lines",full:1,def:LD});
@@ -956,13 +960,44 @@ function openContactForm(){
     return "";
   });
 }
+function deleteContract(id){
+  var used=LOTS.filter(function(l){return String(l.buy)===String(id)||String(l.sell)===String(id)}).length+ALLOC.filter(function(a){return String(a.buy)===String(id)||String(a.sell)===String(id)}).length;
+  var bg=openModal('<h3>Xóa hợp đồng '+esc(id)+'?</h3>'+(used?'<p class="sub">Hợp đồng này còn <b>'+used+'</b> lô hoặc liên kết HĐ mua – HĐ bán. Xóa các dòng đó ở Sheet (tab LO_HANG, HD_LIEN_KET) trước rồi xóa hợp đồng.</p><div class="mfoot"><button type="button" class="btn pri" data-a="close">Đóng</button></div>':'<p class="sub">Xóa hợp đồng và danh sách sản phẩm của nó khỏi Sheet. Không hoàn tác được trên trang.</p><div class="fmsg" id="dmsg" role="status"></div><div class="mfoot"><button type="button" class="btn" data-a="close">Hủy</button><button type="button" class="btn pri" id="dgo">Xóa</button></div>'),false);
+  bg.addEventListener("click",function(e){ if(e.target.closest("[data-a=close]")) closeModal(); });
+  var go=bg.querySelector("#dgo"); if(!go) return;
+  go.onclick=function(){
+    var m=bg.querySelector("#dmsg"); go.disabled=true; m.style.color="var(--muted)"; m.textContent="Đang xóa…";
+    function local(){ DB.HOP_DONG=(DB.HOP_DONG||[]).filter(function(r){return String(r.id)!==String(id)}); DB.HD_SAN_PHAM=(DB.HD_SAN_PHAM||[]).filter(function(r){return String(r.hd)!==String(id)}); refresh(); }
+    if(DEMO){ local(); m.style.color="var(--ok)"; m.textContent="Đã xóa trong bản xem mẫu."; setTimeout(closeModal,600); return }
+    callScript("delete",{id:id},function(ok,t){ go.disabled=false; m.style.color=ok?"var(--ok)":"var(--crit)"; m.textContent=ok?"Đã xóa khỏi Google Sheet.":t; if(ok){ local(); setTimeout(closeModal,700) } });
+  };
+}
+function parseTable(t){
+  var d=t.indexOf("\t")>=0?"\t":(t.split("\n")[0].split(";").length>t.split("\n")[0].split(",").length?";":","), rows=[], row=[], cur="", q=false, i, c;
+  for(i=0;i<t.length;i++){ c=t[i];
+    if(q){ if(c==='"'){ if(t[i+1]==='"'){cur+='"';i++} else q=false } else cur+=c }
+    else if(c==='"') q=true; else if(c===d){ row.push(cur); cur="" }
+    else if(c==="\n"||c==="\r"){ if(c==="\r"&&t[i+1]==="\n") i++; row.push(cur); cur=""; if(row.some(function(x){return x.trim()!==""})) rows.push(row); row=[] }
+    else cur+=c }
+  row.push(cur); if(row.some(function(x){return x.trim()!==""})) rows.push(row);
+  return rows;
+}
+function csvToContract(t){
+  var R=parseTable(t); if(R.length<2) throw new Error("Cần dòng tiêu đề và ít nhất một dòng dữ liệu.");
+  var H=R[0].map(function(h){return h.trim()}), o={lines:[]};
+  R.slice(1).forEach(function(r){ var rec={}; H.forEach(function(h,i){ rec[h]=(r[i]||"").trim() });
+    Object.keys(rec).forEach(function(k){ if(["san_pham","khoi_luong_tan","don_gia"].indexOf(k)<0&&rec[k]!==""&&o[k]===undefined) o[k]=rec[k] });
+    if(rec.san_pham||rec.khoi_luong_tan||rec.don_gia) o.lines.push({san_pham:rec.san_pham||"",khoi_luong_tan:rec.khoi_luong_tan===""||rec.khoi_luong_tan===undefined?"":Number(String(rec.khoi_luong_tan).replace(",",".")),don_gia:rec.don_gia===""||rec.don_gia===undefined?"":Number(String(rec.don_gia).replace(",","."))}) });
+  return o;
+}
 function openImport(){
-  var bg=openModal('<h3>Nhập từ hợp đồng</h3><p class="sub">Dán khối dữ liệu (JSON) mà Claude xuất ra sau khi đọc hợp đồng. Trang sẽ điền sẵn vào form để bạn kiểm tra rồi lưu.</p><textarea id="imp" rows="9" style="width:100%;box-sizing:border-box" placeholder=\'{"id":"HDB-005","loai":"bán","doi_tac":"…","lines":[{"san_pham":"…","khoi_luong_tan":10,"don_gia":9}]}\'></textarea><div class="fmsg" id="impmsg" role="status"></div><div class="mfoot"><button type="button" class="btn" data-a="close">Đóng</button><button type="button" class="btn pri" id="impgo">Điền vào form</button></div>',false);
+  var bg=openModal('<h3>Nhập từ hợp đồng</h3><p class="sub">Dán dữ liệu hợp đồng dạng CSV (dòng đầu là tiêu đề, mỗi sản phẩm một dòng) hoặc JSON. Trang sẽ điền sẵn vào form để bạn kiểm tra rồi lưu.</p><textarea id="imp" rows="9" style="width:100%;box-sizing:border-box" placeholder=\'{"id":"HDB-005","loai":"bán","doi_tac":"…","lines":[{"san_pham":"…","khoi_luong_tan":10,"don_gia":9}]}\'></textarea><div class="fmsg" id="impmsg" role="status"></div><div class="mfoot"><button type="button" class="btn" data-a="close">Đóng</button><button type="button" class="btn pri" id="impgo">Điền vào form</button></div>',false);
   bg.addEventListener("click",function(e){ if(e.target.closest("[data-a=close]")) closeModal(); });
   bg.querySelector("#impgo").onclick=function(){
     var t=bg.querySelector("#imp").value.trim().replace(/^```(?:json)?/i,"").replace(/```$/,"").trim(), m=bg.querySelector("#impmsg"), o;
-    try{ o=JSON.parse(t); }catch(e){ m.style.color="var(--crit)"; m.textContent="Không đọc được dữ liệu. Dán nguyên khối JSON."; return }
+    try{ o=t.charAt(0)==="{"?JSON.parse(t):csvToContract(t); }catch(e){ m.style.color="var(--crit)"; m.textContent="Không đọc được dữ liệu. Dán JSON, hoặc bảng CSV có dòng tiêu đề. "+(e.message&&t.charAt(0)!=="{"?e.message:""); return }
     if(!o||typeof o!=="object"||Array.isArray(o)){ m.style.color="var(--crit)"; m.textContent="Dữ liệu phải là một hợp đồng."; return }
+    ["han_giao","het_han","ngay_ky"].forEach(function(k){ var m=/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/.exec(String(o[k]||"").trim()); if(m) o[k]=m[3]+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[1]).slice(-2) });
     if(!Array.isArray(o.lines)) o.lines=[];
     closeModal(); openContractForm(o);
   };
@@ -986,7 +1021,7 @@ function route(){show(VIEWS[location.hash.replace("#","")]||"dash")}
 function bindTabs(){
   $("a-hd").onclick=openContractForm; bindLegend($("tg-khau"),$("khau-legend"),"6 khâu"); bindLegend($("tg-buoc"),$("buoc-legend"),"6 bước");
   $("board").addEventListener("click",function(e){var b=e.target.closest("[data-o]"); if(b) openOrder(b.getAttribute("data-o"))});
-  $("ogrp").addEventListener("click",function(e){var b=e.target.closest("[data-g]"); if(!b) return; OF.g=b.getAttribute("data-g"); renderBoard(buildAlerts())}); $("cts").addEventListener("click",function(e){var b=e.target.closest("[data-edit]"); if(b) openContractEdit(b.getAttribute("data-edit"))}); $("a-co").onclick=openCompanyEdit; $("a-lh").onclick=openContactForm; $("a-im").onclick=openImport;
+  $("ogrp").addEventListener("click",function(e){var b=e.target.closest("[data-g]"); if(!b) return; OF.g=b.getAttribute("data-g"); renderBoard(buildAlerts())}); $("cts").addEventListener("click",function(e){var d=e.target.closest("[data-del]"); if(d){ deleteContract(d.getAttribute("data-del")); return } var b=e.target.closest("[data-edit]"); if(b) openContractEdit(b.getAttribute("data-edit"))}); $("a-co").onclick=openCompanyEdit; $("a-lh").onclick=openContactForm; $("a-im").onclick=openImport;
   Object.keys(VIEWS).forEach(function(h){
     $("t-"+VIEWS[h]).onclick=function(){show(VIEWS[h]);try{location.hash=h}catch(e){}};
   });
