@@ -8,7 +8,7 @@
 // Nếu mã nằm riêng, dán ID của Google Sheet vào đây (đoạn giữa /d/ và /edit trong link Sheet).
 var SHEET_ID = '13D_F8RS0WjWfkBCuu3OGyI8NlgYNdhZnvI5HNET-jY4'; // Sheet QUẢN LÝ SUPER SEAFOODS; để trống nếu script gắn trực tiếp trong Sheet
 
-var TABS = ['NHANH', 'DOI_TAC', 'HOP_DONG', 'LO_HANG', 'HD_SAN_PHAM', 'HD_LIEN_KET', 'CONG_NO', 'UNG_TRUOC', 'NCC_THI_TRUONG', 'THI_TRUONG', 'YEU_CAU_THI_TRUONG', 'CONG_TY', 'KHAU', 'BUOC_DON', 'LIEN_HE', 'CAI_DAT', 'TUY_CHINH'];
+var TABS = ['NHANH', 'DOI_TAC', 'HOP_DONG', 'LO_HANG', 'HD_SAN_PHAM', 'NHAT_KY_BUOC', 'HD_LIEN_KET', 'CONG_NO', 'UNG_TRUOC', 'NCC_THI_TRUONG', 'THI_TRUONG', 'YEU_CAU_THI_TRUONG', 'CONG_TY', 'KHAU', 'BUOC_DON', 'LIEN_HE', 'CAI_DAT', 'TUY_CHINH'];
 
 function doGet(e) {
   var p = (e && e.parameter) || {};
@@ -80,7 +80,7 @@ function saveContract_(d) {
 }
 
 // Chỉ cho phép trang ghi thêm dòng vào các tab này (nút Thêm hợp đồng, Ghi lần làm việc).
-var WRITABLE = ['HOP_DONG', 'LIEN_HE', 'CONG_NO', 'UNG_TRUOC'];
+var WRITABLE = ['HOP_DONG', 'LIEN_HE', 'CONG_NO', 'UNG_TRUOC', 'NHAT_KY_BUOC'];
 
 // Chuyển giá trị gửi từ trang thành giá trị ô: chuỗi ngày thành ngày, chặn công thức do người dùng nhập.
 function cellValue_(v) {
