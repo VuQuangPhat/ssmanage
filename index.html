@@ -985,7 +985,17 @@ function openStepForm(id){
   ],function(){return ""},function(o,cb){
     var du=[].map.call(MODAL.querySelectorAll("#f-sf .sfi"),function(i){ var v=i.value.trim(); return v?i.getAttribute("data-l")+": "+v:"" }).filter(Boolean).join("; ");
     if(!du&&!o.ghi_chu){ cb(false,"Nhập ít nhất một số liệu hoặc ghi chú."); return }
-    saveRow("NHAT_KY_BUOC",{hd:id,buoc:o.buoc,ngay:o.ngay,du_lieu:du,ghi_chu:o.ghi_chu||""},cb);
+    var step=String(o.buoc).replace(/^\d+\.\s*/,""), row={hd:id,buoc:step,ngay:o.ngay,du_lieu:du,ghi_chu:o.ghi_chu||""};
+    function setStatus(extra,okMsg){
+      var hr=(DB.HOP_DONG||[]).filter(function(r){return String(r.id)===String(id)})[0]||{}, obj={trang_thai:step};
+      if(extra) obj.ghi_chu=(has(hr.ghi_chu)?String(hr.ghi_chu)+"\n":"")+extra;
+      saveUpdate("HOP_DONG",id,[{key:id,obj:obj}],function(ok2,t2){ cb(ok2,ok2?okMsg:"Đã ghi nhật ký nhưng chưa đổi được trạng thái: "+t2) });
+    }
+    saveRow("NHAT_KY_BUOC",row,function(ok,t){
+      if(ok){ setStatus("","Đã lưu nhật ký và chuyển hợp đồng sang bước: "+step+"."); return }
+      var line=o.ngay+" · "+step+(du?" · "+du:"")+(o.ghi_chu?" · "+o.ghi_chu:"");
+      setStatus(line,"Đã chuyển sang bước: "+step+". Tab NHAT_KY_BUOC chưa ghi được nên nhật ký lưu tạm trong ghi chú hợp đồng.");
+    });
   },true,function(bg){ bg.querySelector("#f-buoc").onchange=function(){ bg.querySelector("#f-sf").innerHTML=box(parseInt(this.value,10)||1) } });
 }
 function deleteContract(id){
